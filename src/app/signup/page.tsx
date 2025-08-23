@@ -20,15 +20,6 @@ import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { ADMIN_EMAILS } from "@/lib/config";
-
-const emailSchema = z.string().email("Invalid email address.").refine(email => {
-    if (ADMIN_EMAILS.includes(email)) {
-        return true;
-    }
-    const regex = /^\d{7}@student\.ruet\.ac\.bd$/;
-    return regex.test(email);
-}, "Email must be a valid RUET student email or a registered admin email.");
 
 const phoneRegex = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -36,7 +27,7 @@ const phoneRegex = new RegExp(
 
 const formSchema = z.object({
   name: z.string().min(1, "Full name is required."),
-  email: emailSchema,
+  email: z.string().email("Invalid email address."),
   password: z.string().min(8, "Password must be at least 8 characters."),
   contactNumber: z.string().regex(phoneRegex, 'Invalid Number!'),
 });
@@ -72,7 +63,7 @@ export default function SignupPage() {
         <CardHeader>
           <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
           <CardDescription>
-            Use your official RUET Student email or a whitelisted admin email to join.
+            Enter your details to create a new account.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -98,7 +89,7 @@ export default function SignupPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., 2103141@student.ruet.ac.bd" {...field} />
+                      <Input placeholder="e.g., user@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,18 +21,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
-import { ADMIN_EMAILS } from "@/lib/config";
-
-const emailSchema = z.string().email("Invalid email address.").refine(email => {
-    if (ADMIN_EMAILS.includes(email)) {
-        return true;
-    }
-    const regex = /^\d{7}@student\.ruet\.ac\.bd$/;
-    return regex.test(email);
-}, "Email must be a valid RUET student email or a registered admin email.");
 
 const formSchema = z.object({
-  email: emailSchema,
+  email: z.string().email("Invalid email address."),
   password: z.string().min(8, "Password must be at least 8 characters."),
 });
 
@@ -64,8 +56,8 @@ export default function LoginPage() {
 
   const handlePasswordReset = async () => {
     const email = form.getValues("email");
-    const result = emailSchema.safeParse(email);
-    if (!result.success) {
+    const { success } = z.string().email().safeParse(email);
+    if (!success) {
       form.trigger("email");
       return;
     }
@@ -77,7 +69,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">Login to RUET Connect</CardTitle>
-          <CardDescription>Enter your student credentials to access your account.</CardDescription>
+          <CardDescription>Enter your credentials to access your account.</CardDescription>
         </CardHeader>
         <CardContent>
           {showVerificationAlert && (
@@ -96,9 +88,9 @@ export default function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Student Email</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., 2103141@student.ruet.ac.bd" {...field} />
+                      <Input placeholder="e.g., user@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
