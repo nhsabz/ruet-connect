@@ -20,11 +20,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
+import { ADMIN_EMAILS } from "@/lib/config";
 
 const emailSchema = z.string().email("Invalid email address.").refine(email => {
+    if (ADMIN_EMAILS.includes(email)) {
+        return true;
+    }
     const regex = /^\d{7}@student\.ruet\.ac\.bd$/;
     return regex.test(email);
-}, "Email must be a valid RUET student email (e.g., 2103141@student.ruet.ac.bd).");
+}, "Email must be a valid RUET student email or a registered admin email.");
 
 const formSchema = z.object({
   email: emailSchema,

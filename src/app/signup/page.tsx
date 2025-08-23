@@ -19,11 +19,15 @@ import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { ADMIN_EMAILS } from "@/lib/config";
 
 const emailSchema = z.string().email("Invalid email address.").refine(email => {
+    if (ADMIN_EMAILS.includes(email)) {
+        return true;
+    }
     const regex = /^\d{7}@student\.ruet\.ac\.bd$/;
     return regex.test(email);
-}, "Email must be a valid RUET student email (e.g., 2103141@student.ruet.ac.bd).");
+}, "Email must be a valid RUET student email or a registered admin email.");
 
 const phoneRegex = new RegExp(
   /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
@@ -65,7 +69,7 @@ export default function SignupPage() {
         <CardHeader>
           <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
           <CardDescription>
-            Use your official RUET Student email to join.
+            Use your official RUET Student email or a whitelisted admin email to join.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -76,7 +80,7 @@ export default function SignupPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Student Email</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., 2103141@student.ruet.ac.bd" {...field} />
                     </FormControl>

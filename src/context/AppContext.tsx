@@ -72,8 +72,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
   
+  const getUserId = (email: string) => {
+      if (ADMIN_EMAILS.includes(email)) {
+          return email.split('@')[0];
+      }
+      return email.split('@')[0];
+  }
+
   const getUserById = (userId: string): User | undefined => {
-    const profile = userProfiles[userId];
+    const profile = Object.values(userProfiles).find(p => p.email.split('@')[0] === userId || getUserId(p.email) === userId);
     if (profile) {
       return {
         id: userId,
@@ -123,9 +130,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const signup = async (email: string, password: string, contactNumber: string):Promise<boolean> => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // In a real app, you would save this to a database (e.g., Firestore)
-      const studentId = email.split('@')[0];
-      userProfiles[studentId] = { email, contactNumber };
+      
+      const userId = getUserId(email);
+      userProfiles[userId] = { email, contactNumber };
 
       await sendEmailVerification(userCredential.user);
       
@@ -200,10 +207,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateContactNumber = async (newNumber: string) => {
     if (user) {
         // Update in-memory user profiles
-        if (userProfiles[user.id]) {
-            userProfiles[user.id].contactNumber = newNumber;
+        const userId = getUserId(user.email);
+        if (userProfiles[userId]) {
+            userProfiles[userId].contactNumber = newNumber;
         } else {
-            userProfiles[user.id] = { email: user.email, contactNumber: newNumber };
+            userProfiles[userId] = { email: user.email, contactNumber: newNumber };
         }
         
         // Update user state
