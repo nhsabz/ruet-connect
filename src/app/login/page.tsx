@@ -32,7 +32,7 @@ const formSchema = z.object({
 });
 
 export default function LoginPage() {
-  const { login } = useAppContext();
+  const { login, sendPasswordReset } = useAppContext();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,6 +56,16 @@ export default function LoginPage() {
     setIsSubmitting(true);
     await login(values.email, values.password);
     setIsSubmitting(false);
+  }
+
+  const handlePasswordReset = async () => {
+    const email = form.getValues("email");
+    const result = emailSchema.safeParse(email);
+    if (!result.success) {
+      form.trigger("email");
+      return;
+    }
+    await sendPasswordReset(email);
   }
 
   return (
@@ -95,7 +105,17 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Password</FormLabel>
+                       <Button
+                        type="button"
+                        variant="link"
+                        className="p-0 h-auto text-xs"
+                        onClick={handlePasswordReset}
+                      >
+                        Forgot your password?
+                      </Button>
+                    </div>
                     <FormControl>
                       <Input type="password" {...field} />
                     </FormControl>

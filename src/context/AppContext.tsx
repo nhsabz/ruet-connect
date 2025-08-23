@@ -13,6 +13,7 @@ import {
   signInWithEmailAndPassword,
   sendEmailVerification,
   signOut as firebaseSignOut,
+  sendPasswordResetEmail,
   type User as FirebaseUser
 } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +24,7 @@ interface AppContextType {
   login: (email: string, password?: string) => Promise<boolean>;
   logout: () => void;
   signup: (email: string, password: string) => Promise<boolean>;
+  sendPasswordReset: (email: string) => Promise<void>;
   items: Item[];
   addItem: (item: NewItem) => Promise<void>;
   requests: ClaimRequest[];
@@ -93,23 +95,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await sendEmailVerification(userCredential.user);
       
-      // Sign out the user immediately so they have to verify their email
       await firebaseSignOut(auth);
       
       toast({
         title: "Signup Successful!",
         description: "A verification link has been sent to your email. Please verify before logging in.",
       });
-
+      
+      router.push("/login?verified=false");
       return true;
     } catch (error: any) {
       if(error.code === 'auth/email-already-in-use') {
-        toast({ title: "Signup Failed", description: "An account with this email already exists.", variant: "destructive" });
+        toast({ title: "Signup Failed", description: "An account with this email already exists. Try logging in.", variant: "destructive" });
       } else {
         console.error("Signup error:", error);
-        toast({ title: "Signup Failed", description: "An unexpected error occurred.", variant: "destructive" });
+        toast({ title: "Signup Failed", description: "An unexpected error occurred. Please try again.", variant: "destructive" });
       }
       return false;
+    }
+  };
+  
+  const sendPasswordReset = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: "Password Reset Email Sent",
+        description: "If an account exists for this email, a reset link has been sent.",
+      });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      toast({
+        title: "Error Sending Reset Email",
+        description: "There was a problem sending the password reset email. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -135,7 +154,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setItems(prevItems => [newItem, ...prevItems]);
   };
 
-  const value = { user, firebaseUser, login, logout, signup, items, addItem, requests };
+  const value = { user, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, requests };
 
   if (!isLoaded) {
     return null; // or a loading spinner
