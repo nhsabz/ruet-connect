@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,9 +20,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Category } from "@/lib/types";
+import Image from "next/image";
+import { UploadCloud } from "lucide-react";
 
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
@@ -29,7 +32,7 @@ const formSchema = z.object({
   category: z.enum(["Lost", "Found", "Lend", "Donate"], {
     required_error: "You need to select a category.",
   }),
-  imageUrl: z.string().url("Please enter a valid image URL.").optional().or(z.literal('')),
+  image: z.any().refine(file => file instanceof File, "Image is required."),
 });
 
 const categories: Category[] = ["Lost", "Found", "Lend", "Donate"];
@@ -38,6 +41,7 @@ export default function PostPage() {
   const { user, addItem } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
+  const [preview, setPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -55,14 +59,28 @@ export default function PostPage() {
     defaultValues: {
       title: "",
       description: "",
-      imageUrl: "",
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      form.setValue("image", file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (!preview) return;
     const finalValues = {
-        ...values,
-        imageUrl: values.imageUrl || 'https://placehold.co/600x400.png',
+      title: values.title,
+      description: values.description,
+      category: values.category,
+      imageUrl: preview,
     };
     addItem(finalValues as any);
     toast({
@@ -144,16 +162,26 @@ export default function PostPage() {
               />
                <FormField
                 control={form.control}
-                name="imageUrl"
+                name="image"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Image URL (Optional)</FormLabel>
+                    <FormLabel>Item Image</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://example.com/image.png" {...field} />
+                      <div className="w-full">
+                        <label htmlFor="file-upload" className="relative cursor-pointer rounded-lg border-2 border-dashed border-muted-foreground/50 w-full h-64 flex flex-col items-center justify-center text-center p-4 hover:border-primary transition-colors">
+                          {preview ? (
+                            <Image src={preview} alt="Image preview" fill className="object-contain rounded-md" />
+                          ) : (
+                            <div className="space-y-2 text-muted-foreground">
+                              <UploadCloud className="mx-auto h-12 w-12" />
+                              <p className="font-semibold">Click to upload an image</p>
+                              <p className="text-xs">PNG, JPG, GIF up to 10MB</p>
+                            </div>
+                          )}
+                        </label>
+                        <Input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" />
+                      </div>
                     </FormControl>
-                    <FormDescription>
-                        You can upload an image to a service like Imgur and paste the link here.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
