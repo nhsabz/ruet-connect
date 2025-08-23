@@ -17,9 +17,11 @@ import {
   type User as FirebaseUser
 } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
+import { ADMIN_EMAILS } from "@/lib/config";
 
 interface AppContextType {
   user: User | null;
+  isAdmin: boolean;
   firebaseUser: FirebaseUser | null;
   login: (email: string, password?: string) => Promise<boolean>;
   logout: () => void;
@@ -27,6 +29,7 @@ interface AppContextType {
   sendPasswordReset: (email: string) => Promise<void>;
   items: Item[];
   addItem: (item: NewItem) => Promise<void>;
+  deleteItem: (itemId: string) => Promise<void>;
   requests: ClaimRequest[];
   updateContactNumber: (newNumber: string) => Promise<void>;
   getUserById: (userId: string) => User | undefined;
@@ -40,6 +43,7 @@ let userProfiles: {[key: string]: {email: string, contactNumber: string}} = mock
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [items, setItems] = useState<Item[]>(mockItems);
   const [requests, setRequests] = useState<ClaimRequest[]>(mockRequests);
@@ -58,8 +62,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             email: currentUser.email,
             contactNumber: profile?.contactNumber
         });
+        setIsAdmin(ADMIN_EMAILS.includes(currentUser.email));
       } else {
         setUser(null);
+        setIsAdmin(false);
       }
       setIsLoaded(true);
     });
@@ -108,6 +114,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     firebaseSignOut(auth).then(() => {
         setUser(null);
         setFirebaseUser(null);
+        setIsAdmin(false);
         router.push("/login");
         toast({ title: "Logged Out", description: "You have been successfully logged out." });
     })
@@ -181,6 +188,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setItems(prevItems => [newItem, ...prevItems]);
   };
   
+  const deleteItem = async (itemId: string) => {
+    if (!isAdmin) {
+        toast({ title: "Permission Denied", description: "You are not authorized to delete items.", variant: "destructive"});
+        return;
+    }
+    setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+    toast({ title: "Item Deleted", description: "The item has been successfully removed."});
+  }
+
   const updateContactNumber = async (newNumber: string) => {
     if (user) {
         // Update in-memory user profiles
@@ -195,7 +211,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = { user, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, requests, updateContactNumber, getUserById };
+  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, requests, updateContactNumber, getUserById };
 
   if (!isLoaded) {
     return null; // or a loading spinner

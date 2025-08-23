@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter } from "next/navigation";
-import { Phone } from "lucide-react";
+import { Phone, Trash2 } from "lucide-react";
 
 interface ItemCardProps {
   item: Item;
@@ -17,7 +17,7 @@ interface ItemCardProps {
 
 export function ItemCard({ item }: ItemCardProps) {
   const { toast } = useToast();
-  const { user, getUserById } = useAppContext();
+  const { user, getUserById, isAdmin, deleteItem } = useAppContext();
   const router = useRouter();
   
   const itemOwner = getUserById(item.userId);
@@ -47,6 +47,10 @@ export function ItemCard({ item }: ItemCardProps) {
       description: `Your request for "${item.title}" has been sent to the owner.`,
     });
   };
+  
+  const handleDelete = () => {
+    deleteItem(item.id);
+  }
 
   const categoryVariants: { [key in Item["category"]]: "default" | "secondary" | "destructive" | "outline" } = {
     Lost: "destructive",
@@ -89,9 +93,16 @@ export function ItemCard({ item }: ItemCardProps) {
                 <span>{itemOwner.contactNumber}</span>
             </div>
         )}
-        <Button className="w-full" onClick={handleClaimRequest} disabled={user?.id === item.userId}>
-          Claim / Request
-        </Button>
+        <div className="w-full flex gap-2">
+            <Button className="w-full" onClick={handleClaimRequest} disabled={user?.id === item.userId}>
+            Claim / Request
+            </Button>
+            {isAdmin && (
+                <Button variant="destructive" size="icon" onClick={handleDelete} title="Delete as Admin">
+                    <Trash2 />
+                </Button>
+            )}
+        </div>
       </CardFooter>
     </Card>
   );
