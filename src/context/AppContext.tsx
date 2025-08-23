@@ -81,8 +81,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (ADMIN_EMAILS.includes(email)) {
         return email.split('@')[0];
     }
-    const match = email.match(/^(\d{7})@student\.ruet\.ac\.bd$/);
-    return match ? match[1] : email.split('@')[0];
+    // Keep this for backward compatibility with old student emails
+    const studentMatch = email.match(/^(\d{7})@student\.ruet\.ac\.bd$/);
+    if (studentMatch) return studentMatch[1];
+    
+    // Generic email handling
+    return email.split('@')[0];
   }
 
   const getUserById = (userId: string): User | undefined => {
@@ -185,13 +189,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addItem = async (itemData: NewItem) => {
-    if(!user) return;
+    if (!user?.id) {
+        toast({
+            title: "Error",
+            description: "You must be logged in to post an item.",
+            variant: "destructive"
+        });
+        throw new Error("User not authenticated");
+    }
 
     let imageUrl = 'https://placehold.co/600x400.png';
     if (itemData.image) {
-        const storageRef = ref(storage, `images/${user.id}/${Date.now()}_${itemData.image.name}`);
-        const snapshot = await uploadBytes(storageRef, itemData.image);
-        imageUrl = await getDownloadURL(snapshot.ref);
+        try {
+            const storageRef = ref(storage, `images/${user.id}/${Date.now()}_${itemData.image.name}`);
+            const snapshot = await uploadBytes(storageRef, itemData.image);
+            imageUrl = await getDownloadURL(snapshot.ref);
+        } catch (error) {
+            console.error("Firebase Storage Error:", error);
+            toast({
+                title: "Image Upload Failed",
+                description: "Could not upload image. Please check your network and Firebase Storage rules. Using default image.",
+                variant: "destructive",
+            });
+            // Let the process continue with a placeholder image, but don't re-throw
+        }
     }
     
     const newItem: Item = {
@@ -225,9 +246,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       await deleteUser(currentFirebaseUser);
-      const userId = getUserId(currentFirebaseUser.email!);
-      delete userProfiles[userId];
-      setItems(prev => prev.filter(item => item.userId !== userId));
+      if(currentFirebaseUser.email) {
+          const userId = getUserId(currentFirebaseUser.email);
+          delete userProfiles[userId];
+          setItems(prev => prev.filter(item => item.userId !== userId));
+      }
       toast({ title: "Account Deleted", description: "Your account has been permanently deleted." });
       router.push("/signup");
     } catch (error: any) {
@@ -293,3 +316,5 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
+
+    
