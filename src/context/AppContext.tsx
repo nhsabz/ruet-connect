@@ -1,9 +1,12 @@
+
 "use client";
 
 import { createContext, useState, useEffect, type ReactNode } from "react";
-import type { User, Item, ClaimRequest } from "@/lib/types";
+import type { User, Item, ClaimRequest, NewItem } from "@/lib/types";
 import { mockUsers, mockItems, mockRequests } from "@/lib/mockData";
 import { useRouter } from "next/navigation";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 interface AppContextType {
   user: User | null;
@@ -11,7 +14,7 @@ interface AppContextType {
   logout: () => void;
   signup: (id: string) => boolean;
   items: Item[];
-  addItem: (item: Omit<Item, 'id' | 'createdAt' | 'userId'>) => void;
+  addItem: (item: NewItem) => Promise<void>;
   requests: ClaimRequest[];
 }
 
@@ -38,9 +41,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const login = (id: string, password?: string): boolean => {
     const existingUser = mockUsers.find((u) => u.id === id);
     if (existingUser) {
-      // For demo purposes, any 8-char password for existing mock users is fine
-      // The demo account has a specific password
-      const passwordIsValid = id === '2103141' ? password === '12345678' : !!password && password.length >= 8;
+      const passwordIsValid = !!password && password.length >= 8;
 
       if (passwordIsValid) {
         setUser(existingUser);
@@ -69,11 +70,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const addItem = (itemData: Omit<Item, 'id' | 'createdAt' | 'userId'>) => {
+  const addItem = async (itemData: NewItem) => {
     if(!user) return;
+
+    let imageUrl = 'https://placehold.co/600x400.png';
+    if (itemData.image) {
+        const storageRef = ref(storage, `images/${user.id}/${Date.now()}_${itemData.image.name}`);
+        const snapshot = await uploadBytes(storageRef, itemData.image);
+        imageUrl = await getDownloadURL(snapshot.ref);
+    }
+    
     const newItem: Item = {
-        ...itemData,
         id: (items.length + 1).toString(),
+        title: itemData.title,
+        description: itemData.description,
+        category: itemData.category,
+        imageUrl,
         createdAt: new Date(),
         userId: user.id,
     };

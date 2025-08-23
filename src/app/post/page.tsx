@@ -32,7 +32,7 @@ const formSchema = z.object({
   category: z.enum(["Lost", "Found", "Lend", "Donate"], {
     required_error: "You need to select a category.",
   }),
-  image: z.any().refine(file => file instanceof File, "Image is required."),
+  image: z.instanceof(File).optional(),
 });
 
 const categories: Category[] = ["Lost", "Found", "Lend", "Donate"];
@@ -42,6 +42,7 @@ export default function PostPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [preview, setPreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -74,20 +75,25 @@ export default function PostPage() {
     }
   };
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (!preview) return;
-    const finalValues = {
-      title: values.title,
-      description: values.description,
-      category: values.category,
-      imageUrl: preview,
-    };
-    addItem(finalValues as any);
-    toast({
-        title: "Item Posted!",
-        description: "Your item has been successfully listed."
-    });
-    router.push("/browse");
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true);
+    try {
+      await addItem(values);
+      toast({
+          title: "Item Posted!",
+          description: "Your item has been successfully listed."
+      });
+      router.push("/browse");
+    } catch (error) {
+        console.error("Failed to post item:", error);
+        toast({
+            title: "Upload Failed",
+            description: "There was a problem uploading your item. Please try again.",
+            variant: "destructive"
+        })
+    } finally {
+        setIsSubmitting(false);
+    }
   }
   
   if (!user) {
@@ -100,7 +106,7 @@ export default function PostPage() {
         <CardHeader>
           <CardTitle className="text-2xl font-headline">Post a New Item</CardTitle>
           <CardDescription>
-            Fill in the details below to list your item. All fields are required.
+            Fill in the details below to list your item. Image is optional but recommended.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -186,8 +192,8 @@ export default function PostPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Post Item
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Posting...' : 'Post Item'}
               </Button>
             </form>
           </Form>

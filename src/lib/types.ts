@@ -12,6 +12,13 @@ export interface Item {
   createdAt: Date;
 }
 
+export interface NewItem {
+  title: string;
+  description: string;
+  category: Category;
+  image?: File;
+}
+
 export interface User {
   id: string; // Student ID
 }
