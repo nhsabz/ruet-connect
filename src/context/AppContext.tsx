@@ -3,7 +3,7 @@
 
 import { createContext, useState, useEffect, type ReactNode } from "react";
 import type { User, Item, ClaimRequest, NewItem } from "@/lib/types";
-import { mockItems, mockRequests } from "@/lib/mockData";
+import { mockItems, mockRequests, mockUserProfiles } from "@/lib/mockData";
 import { useRouter } from "next/navigation";
 import { storage, auth } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -28,14 +28,14 @@ interface AppContextType {
   items: Item[];
   addItem: (item: NewItem) => Promise<void>;
   requests: ClaimRequest[];
+  updateContactNumber: (newNumber: string) => Promise<void>;
+  getUserById: (userId: string) => User | undefined;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // In a real app, you'd fetch this from a database
-const userProfiles: {[key: string]: {contactNumber: string}} = {
-    '2103141@student.ruet.ac.bd': { contactNumber: '01234567890' }
-};
+let userProfiles: {[key: string]: {email: string, contactNumber: string}} = mockUserProfiles;
 
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -52,7 +52,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setFirebaseUser(currentUser);
       if (currentUser && currentUser.emailVerified && currentUser.email) {
         const studentId = currentUser.email.split('@')[0];
-        const profile = userProfiles[currentUser.email];
+        const profile = Object.values(userProfiles).find(p => p.email === currentUser.email);
         setUser({ 
             id: studentId, 
             email: currentUser.email,
@@ -65,6 +65,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     return () => unsubscribe();
   }, []);
+  
+  const getUserById = (userId: string): User | undefined => {
+    const profile = userProfiles[userId];
+    if (profile) {
+      return {
+        id: userId,
+        email: profile.email,
+        contactNumber: profile.contactNumber,
+      };
+    }
+    return undefined;
+  };
 
   const login = async (email: string, password?: string): Promise<boolean> => {
     if (!password) {
@@ -105,7 +117,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       // In a real app, you would save this to a database (e.g., Firestore)
-      userProfiles[email] = { contactNumber };
+      const studentId = email.split('@')[0];
+      userProfiles[studentId] = { email, contactNumber };
 
       await sendEmailVerification(userCredential.user);
       
@@ -167,8 +180,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     setItems(prevItems => [newItem, ...prevItems]);
   };
+  
+  const updateContactNumber = async (newNumber: string) => {
+    if (user) {
+        // Update in-memory user profiles
+        if (userProfiles[user.id]) {
+            userProfiles[user.id].contactNumber = newNumber;
+        } else {
+            userProfiles[user.id] = { email: user.email, contactNumber: newNumber };
+        }
+        
+        // Update user state
+        setUser(prevUser => prevUser ? { ...prevUser, contactNumber: newNumber } : null);
+    }
+  };
 
-  const value = { user, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, requests };
+  const value = { user, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, requests, updateContactNumber, getUserById };
 
   if (!isLoaded) {
     return null; // or a loading spinner

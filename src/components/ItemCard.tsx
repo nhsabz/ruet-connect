@@ -3,12 +3,13 @@
 
 import Image from "next/image";
 import type { Item } from "@/lib/types";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter } from "next/navigation";
+import { Phone } from "lucide-react";
 
 interface ItemCardProps {
   item: Item;
@@ -16,8 +17,10 @@ interface ItemCardProps {
 
 export function ItemCard({ item }: ItemCardProps) {
   const { toast } = useToast();
-  const { user } = useAppContext();
+  const { user, getUserById } = useAppContext();
   const router = useRouter();
+  
+  const itemOwner = getUserById(item.userId);
 
   const handleClaimRequest = () => {
     if (!user) {
@@ -29,6 +32,16 @@ export function ItemCard({ item }: ItemCardProps) {
         router.push("/login");
         return;
     }
+    // Prevent owner from requesting their own item
+    if (user.id === item.userId) {
+        toast({
+            title: "Action Not Allowed",
+            description: "You cannot request your own item.",
+            variant: "destructive"
+        });
+        return;
+    }
+
     toast({
       title: "Request Sent!",
       description: `Your request for "${item.title}" has been sent to the owner.`,
@@ -55,7 +68,7 @@ export function ItemCard({ item }: ItemCardProps) {
             data-ai-hint={item['data-ai-hint']}
           />
         </div>
-        <div className="p-4">
+        <div className="p-4 pb-2">
           <Badge variant={categoryVariants[item.category]}>
             {item.category}
           </Badge>
@@ -69,8 +82,14 @@ export function ItemCard({ item }: ItemCardProps) {
           {item.description}
         </p>
       </CardContent>
-      <CardFooter className="p-4 pt-0">
-        <Button className="w-full" onClick={handleClaimRequest}>
+      <CardFooter className="flex-col items-start p-4 pt-0 gap-4">
+        {itemOwner?.contactNumber && (
+            <div className="flex items-center text-sm text-muted-foreground gap-2">
+                <Phone className="h-4 w-4" />
+                <span>{itemOwner.contactNumber}</span>
+            </div>
+        )}
+        <Button className="w-full" onClick={handleClaimRequest} disabled={user?.id === item.userId}>
           Claim / Request
         </Button>
       </CardFooter>

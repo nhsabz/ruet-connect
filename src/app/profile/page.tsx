@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useToast } from "@/hooks/use-toast";
@@ -10,12 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ItemCard } from "@/components/ItemCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Phone, Edit, Save } from "lucide-react";
 
 export default function ProfilePage() {
-  const { user, items, requests } = useAppContext();
+  const { user, items, requests, updateContactNumber } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
+  const [isEditingContact, setIsEditingContact] = useState(false);
+  const [newContactNumber, setNewContactNumber] = useState(user?.contactNumber || "");
 
   useEffect(() => {
     if (!user) {
@@ -25,8 +28,21 @@ export default function ProfilePage() {
         variant: "destructive",
       });
       router.replace("/login");
+    } else {
+        setNewContactNumber(user.contactNumber || "");
     }
   }, [user, router, toast]);
+
+  const handleContactSave = async () => {
+    if (user) {
+        await updateContactNumber(newContactNumber);
+        toast({
+            title: "Contact Updated",
+            description: "Your contact number has been successfully updated."
+        });
+        setIsEditingContact(false);
+    }
+  }
 
   if (!user) {
     return null; // Or a loading skeleton
@@ -46,12 +62,33 @@ export default function ProfilePage() {
             <CardTitle className="text-3xl font-headline">My Profile</CardTitle>
             <CardDescription className="text-lg">Student ID: {user.id}</CardDescription>
             <CardDescription className="text-md text-muted-foreground">{user.email}</CardDescription>
-            {user.contactNumber && (
-                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                    <Phone className="h-4 w-4" />
-                    <span>{user.contactNumber}</span>
-                </div>
-            )}
+            <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                <Phone className="h-4 w-4" />
+                {isEditingContact ? (
+                    <div className="flex items-center gap-2">
+                        <Input 
+                            type="tel"
+                            value={newContactNumber}
+                            onChange={(e) => setNewContactNumber(e.target.value)}
+                            className="h-8"
+                            placeholder="Your contact number"
+                        />
+                        <Button size="icon" className="h-8 w-8" onClick={handleContactSave}>
+                            <Save className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingContact(false)}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ) : (
+                    <>
+                        <span>{user.contactNumber || "Not set"}</span>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingContact(true)}>
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                    </>
+                )}
+            </div>
           </div>
         </CardHeader>
       </Card>
@@ -113,3 +150,8 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+// Dummy X icon for the edit form
+const X = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+)
