@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter } from "next/navigation";
-import { Phone, Trash2 } from "lucide-react";
+import { Phone, Trash2, User } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,14 +95,20 @@ export function ItemCard({ item }: ItemCardProps) {
           {item.description}
         </p>
       </CardContent>
-      <CardFooter className="flex-col items-start p-4 pt-0 gap-4">
+      <CardFooter className="flex-col items-start p-4 pt-0 gap-2">
+        {itemOwner?.name && (
+            <div className="flex items-center text-sm text-muted-foreground gap-2">
+                <User className="h-4 w-4" />
+                <span>{itemOwner.name}</span>
+            </div>
+        )}
         {itemOwner?.contactNumber && (
             <div className="flex items-center text-sm text-muted-foreground gap-2">
                 <Phone className="h-4 w-4" />
                 <span>{itemOwner.contactNumber}</span>
             </div>
         )}
-        <div className="w-full flex gap-2">
+        <div className="w-full flex gap-2 pt-2">
             <Button className="w-full" onClick={handleClaimRequest} disabled={user?.id === item.userId}>
             Claim / Request
             </Button>

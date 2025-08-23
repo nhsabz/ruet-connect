@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +35,7 @@ const phoneRegex = new RegExp(
 );
 
 const formSchema = z.object({
+  name: z.string().min(1, "Full name is required."),
   email: emailSchema,
   password: z.string().min(8, "Password must be at least 8 characters."),
   contactNumber: z.string().regex(phoneRegex, 'Invalid Number!'),
@@ -48,6 +50,7 @@ export default function SignupPage() {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
+            name: "",
             email: "",
             password: "",
             contactNumber: "",
@@ -56,7 +59,7 @@ export default function SignupPage() {
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
-        const success = await signup(values.email, values.password, values.contactNumber);
+        const success = await signup(values.name, values.email, values.password, values.contactNumber);
         if (success) {
             router.push("/login");
         }
@@ -75,6 +78,19 @@ export default function SignupPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Sabbir Huda" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="email"

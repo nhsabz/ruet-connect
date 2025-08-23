@@ -26,7 +26,7 @@ interface AppContextType {
   firebaseUser: FirebaseUser | null;
   login: (email: string, password?: string) => Promise<boolean>;
   logout: () => void;
-  signup: (email: string, password: string, contactNumber: string) => Promise<boolean>;
+  signup: (name: string, email: string, password: string, contactNumber: string) => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<void>;
   items: Item[];
   addItem: (item: NewItem) => Promise<void>;
@@ -42,7 +42,7 @@ interface AppContextType {
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // In a real app, you'd fetch this from a database
-let userProfiles: {[key: string]: {email: string, contactNumber: string}} = mockUserProfiles;
+let userProfiles: {[key: string]: {name: string, email: string, contactNumber: string}} = mockUserProfiles;
 
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -63,6 +63,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const profile = userProfiles[studentId];
         setUser({ 
             id: studentId, 
+            name: profile?.name,
             email: currentUser.email,
             contactNumber: profile?.contactNumber
         });
@@ -89,6 +90,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (profile) {
       return {
         id: userId,
+        name: profile.name,
         email: profile.email,
         contactNumber: profile.contactNumber,
       };
@@ -136,12 +138,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   };
 
-  const signup = async (email: string, password: string, contactNumber: string):Promise<boolean> => {
+  const signup = async (name: string, email: string, password: string, contactNumber: string):Promise<boolean> => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       const userId = getUserId(email);
-      userProfiles[userId] = { email, contactNumber };
+      userProfiles[userId] = { name, email, contactNumber };
 
       await sendEmailVerification(userCredential.user);
       
@@ -269,7 +271,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (userProfiles[userId]) {
             userProfiles[userId].contactNumber = newNumber;
         } else {
-            userProfiles[userId] = { email: user.email, contactNumber: newNumber };
+            userProfiles[userId] = { name: user.name || '', email: user.email, contactNumber: newNumber };
         }
         
         // Update user state

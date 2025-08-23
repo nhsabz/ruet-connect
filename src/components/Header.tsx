@@ -75,14 +75,14 @@ export function Header() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
-                        <AvatarFallback>{user.id.substring(0, 2)}</AvatarFallback>
+                        <AvatarFallback>{user.name ? user.name.charAt(0) : user.id.substring(0, 2)}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">Student ID</p>
+                        <p className="text-sm font-medium leading-none">{user.name || 'Student'}</p>
                         <p className="text-xs leading-none text-muted-foreground">
                           {user.email}
                         </p>

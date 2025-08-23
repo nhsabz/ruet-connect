@@ -1,16 +1,17 @@
+
 import type { User, Item, ClaimRequest } from './types';
 
 export const mockUsers: User[] = [
-  { id: '2103141', email: '2103141@student.ruet.ac.bd', contactNumber: '01234567890' },
-  { id: '2001001', email: '2001001@student.ruet.ac.bd', contactNumber: '01987654321' },
-  { id: '2207050', email: '2207050@student.ruet.ac.bd', contactNumber: '01555555555' },
+  { id: '2103141', name: 'Sabbir Huda', email: '2103141@student.ruet.ac.bd', contactNumber: '01234567890' },
+  { id: '2001001', name: 'Jane Doe', email: '2001001@student.ruet.ac.bd', contactNumber: '01987654321' },
+  { id: '2207050', name: 'John Smith', email: '2207050@student.ruet.ac.bd', contactNumber: '01555555555' },
 ];
 
 // This is now the initial state for the in-memory userProfiles object in AppContext
-export const mockUserProfiles: {[key: string]: {email: string, contactNumber: string}} = {
-    '2103141': { email: '2103141@student.ruet.ac.bd', contactNumber: '01234567890' },
-    '2001001': { email: '2001001@student.ruet.ac.bd', contactNumber: '01987654321' },
-    '2207050': { email: '2207050@student.ruet.ac.bd', contactNumber: '01555555555' },
+export const mockUserProfiles: {[key: string]: {name: string, email: string, contactNumber: string}} = {
+    '2103141': { name: 'Sabbir Huda', email: '2103141@student.ruet.ac.bd', contactNumber: '01234567890' },
+    '2001001': { name: 'Jane Doe', email: '2001001@student.ruet.ac.bd', contactNumber: '01987654321' },
+    '2207050': { name: 'John Smith', email: '2207050@student.ruet.ac.bd', contactNumber: '01555555555' },
 };
 
 export const mockItems: Item[] = [

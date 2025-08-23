@@ -12,7 +12,7 @@ import { ItemCard } from "@/components/ItemCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Phone, Edit, Save, X, AlertTriangle } from "lucide-react";
+import { Phone, Edit, Save, X, AlertTriangle, User as UserIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,10 +72,10 @@ export default function ProfilePage() {
       <Card>
         <CardHeader className="flex flex-row items-center gap-4">
           <Avatar className="h-20 w-20">
-            <AvatarFallback className="text-3xl">{user.id.substring(0, 2)}</AvatarFallback>
+            <AvatarFallback className="text-3xl">{user.name ? user.name.charAt(0) : user.id.substring(0, 2)}</AvatarFallback>
           </Avatar>
           <div>
-            <CardTitle className="text-3xl font-headline">My Profile</CardTitle>
+            <CardTitle className="text-3xl font-headline">{user.name || 'My Profile'}</CardTitle>
             <CardDescription className="text-lg">Student ID: {user.id}</CardDescription>
             <CardDescription className="text-md text-muted-foreground">{user.email}</CardDescription>
             <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">

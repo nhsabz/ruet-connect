@@ -21,6 +21,7 @@ export interface NewItem {
 
 export interface User {
   id: string; // Student ID
+  name?: string;
   email: string;
   contactNumber?: string;
 }
