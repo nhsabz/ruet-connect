@@ -33,6 +33,7 @@ interface AppContextType {
   deleteItem: (itemId: string, itemUserId: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
   requests: ClaimRequest[];
+  pendingRequestCount: number;
   updateContactNumber: (newNumber: string) => Promise<void>;
   getUserById: (userId: string) => User | undefined;
 }
@@ -254,7 +255,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, updateContactNumber, getUserById };
+  const pendingRequestCount = user
+    ? requests.filter(
+        (req) => req.ownerId === user.id && req.status === 'Pending'
+      ).length
+    : 0;
+
+  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, pendingRequestCount, updateContactNumber, getUserById };
 
   if (!isLoaded) {
     return null; // or a loading spinner
