@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ItemCard } from "@/components/ItemCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Phone } from "lucide-react";
 
 export default function ProfilePage() {
   const { user, items, requests } = useAppContext();
@@ -45,6 +46,12 @@ export default function ProfilePage() {
             <CardTitle className="text-3xl font-headline">My Profile</CardTitle>
             <CardDescription className="text-lg">Student ID: {user.id}</CardDescription>
             <CardDescription className="text-md text-muted-foreground">{user.email}</CardDescription>
+            {user.contactNumber && (
+                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                    <Phone className="h-4 w-4" />
+                    <span>{user.contactNumber}</span>
+                </div>
+            )}
           </div>
         </CardHeader>
       </Card>

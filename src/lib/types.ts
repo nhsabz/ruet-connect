@@ -21,7 +21,8 @@ export interface NewItem {
 
 export interface User {
   id: string; // Student ID
-  email: string | null;
+  email: string;
+  contactNumber?: string;
 }
 
 export interface ClaimRequest {

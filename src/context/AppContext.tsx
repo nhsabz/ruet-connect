@@ -23,7 +23,7 @@ interface AppContextType {
   firebaseUser: FirebaseUser | null;
   login: (email: string, password?: string) => Promise<boolean>;
   logout: () => void;
-  signup: (email: string, password: string) => Promise<boolean>;
+  signup: (email: string, password: string, contactNumber: string) => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<void>;
   items: Item[];
   addItem: (item: NewItem) => Promise<void>;
@@ -31,6 +31,12 @@ interface AppContextType {
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
+
+// In a real app, you'd fetch this from a database
+const userProfiles: {[key: string]: {contactNumber: string}} = {
+    '2103141@student.ruet.ac.bd': { contactNumber: '01234567890' }
+};
+
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -44,9 +50,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setFirebaseUser(currentUser);
-      if (currentUser && currentUser.emailVerified) {
-        const studentId = currentUser.email?.split('@')[0] || '';
-        setUser({ id: studentId, email: currentUser.email });
+      if (currentUser && currentUser.emailVerified && currentUser.email) {
+        const studentId = currentUser.email.split('@')[0];
+        const profile = userProfiles[currentUser.email];
+        setUser({ 
+            id: studentId, 
+            email: currentUser.email,
+            contactNumber: profile?.contactNumber
+        });
       } else {
         setUser(null);
       }
@@ -90,9 +101,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   };
 
-  const signup = async (email: string, password: string):Promise<boolean> => {
+  const signup = async (email: string, password: string, contactNumber: string):Promise<boolean> => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // In a real app, you would save this to a database (e.g., Firestore)
+      userProfiles[email] = { contactNumber };
+
       await sendEmailVerification(userCredential.user);
       
       await firebaseSignOut(auth);

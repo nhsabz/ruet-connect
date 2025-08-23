@@ -25,10 +25,14 @@ const emailSchema = z.string().email("Invalid email address.").refine(email => {
     return regex.test(email);
 }, "Email must be a valid RUET student email (e.g., 2103141@student.ruet.ac.bd).");
 
+const phoneRegex = new RegExp(
+  /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
+);
 
 const formSchema = z.object({
   email: emailSchema,
   password: z.string().min(8, "Password must be at least 8 characters."),
+  contactNumber: z.string().regex(phoneRegex, 'Invalid Number!'),
 });
 
 export default function SignupPage() {
@@ -42,12 +46,13 @@ export default function SignupPage() {
         defaultValues: {
             email: "",
             password: "",
+            contactNumber: "",
         },
     });
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
-        const success = await signup(values.email, values.password);
+        const success = await signup(values.email, values.password, values.contactNumber);
         if (success) {
             router.push("/login");
         }
@@ -87,6 +92,19 @@ export default function SignupPage() {
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="contactNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., 01712345678" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
