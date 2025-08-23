@@ -33,6 +33,7 @@ interface AppContextType {
   deleteItem: (itemId: string, itemUserId: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
   requests: ClaimRequest[];
+  createRequest: (item: Item) => void;
   pendingRequestCount: number;
   updateContactNumber: (newNumber: string) => Promise<void>;
   getUserById: (userId: string) => User | undefined;
@@ -239,6 +240,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
        }
     }
   };
+  
+  const createRequest = (item: Item) => {
+    if (!user) return;
+
+    const newRequest: ClaimRequest = {
+        id: `req${requests.length + 1}`,
+        itemId: item.id,
+        itemTitle: item.title,
+        requesterId: user.id,
+        ownerId: item.userId,
+        status: 'Pending',
+        createdAt: new Date(),
+    };
+    
+    setRequests(prev => [newRequest, ...prev]);
+
+    toast({
+      title: "Request Sent!",
+      description: `Your request for "${item.title}" has been sent to the owner.`,
+    });
+  }
 
   const updateContactNumber = async (newNumber: string) => {
     if (user) {
@@ -261,7 +283,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ).length
     : 0;
 
-  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, pendingRequestCount, updateContactNumber, getUserById };
+  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, createRequest, pendingRequestCount, updateContactNumber, getUserById };
 
   if (!isLoaded) {
     return null; // or a loading spinner

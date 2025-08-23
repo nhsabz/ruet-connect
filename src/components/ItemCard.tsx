@@ -28,7 +28,7 @@ interface ItemCardProps {
 
 export function ItemCard({ item }: ItemCardProps) {
   const { toast } = useToast();
-  const { user, getUserById, isAdmin, deleteItem } = useAppContext();
+  const { user, getUserById, isAdmin, deleteItem, createRequest } = useAppContext();
   const router = useRouter();
   
   const itemOwner = getUserById(item.userId);
@@ -53,11 +53,8 @@ export function ItemCard({ item }: ItemCardProps) {
         });
         return;
     }
-
-    toast({
-      title: "Request Sent!",
-      description: `Your request for "${item.title}" has been sent to the owner.`,
-    });
+    
+    createRequest(item);
   };
   
   const handleDelete = () => {

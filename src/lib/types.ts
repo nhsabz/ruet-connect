@@ -26,7 +26,7 @@ export interface User {
 }
 
 export interface ClaimRequest {
-  id:string;
+  id: string;
   itemId: string;
   itemTitle: string;
   requesterId: string;
