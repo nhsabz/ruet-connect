@@ -190,12 +190,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addItem = async (itemData: NewItem) => {
     if (!user?.id) {
-        toast({
-            title: "Error",
-            description: "You must be logged in to post an item.",
-            variant: "destructive"
-        });
-        throw new Error("User not authenticated");
+        const err = new Error("User not authenticated");
+        console.error("addItem failed:", err);
+        throw err;
     }
 
     let imageUrl = 'https://placehold.co/600x400.png';
@@ -206,12 +203,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             imageUrl = await getDownloadURL(snapshot.ref);
         } catch (error) {
             console.error("Firebase Storage Error:", error);
-            toast({
-                title: "Image Upload Failed",
-                description: "Could not upload image. Please check your network and Firebase Storage rules. Using default image.",
-                variant: "destructive",
-            });
-            // Let the process continue with a placeholder image, but don't re-throw
+            // Re-throw the error to be caught by the calling component
+            throw error;
         }
     }
     
@@ -316,5 +309,3 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
-
-    
