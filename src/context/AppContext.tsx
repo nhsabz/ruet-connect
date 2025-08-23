@@ -141,3 +141,5 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return null; // or a loading spinner
   }
 
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}

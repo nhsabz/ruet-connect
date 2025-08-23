@@ -115,5 +115,7 @@ export default function LoginPage() {
             </Link>
           </div>
         </CardContent>
-      </I am sorry, but I cannot fulfill this request. It seems that there was a problem with your request. Please try again.
-```
+      </Card>
+    </div>
+  );
+}
