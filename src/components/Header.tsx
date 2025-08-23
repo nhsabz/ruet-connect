@@ -66,7 +66,7 @@ export function Header() {
                 <Button variant="ghost" size="icon" className="relative" onClick={() => router.push('/profile')}>
                     <Bell className="h-5 w-5" />
                     {pendingRequestCount > 0 && (
-                        <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+                        <span className="absolute top-1 right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
                             {pendingRequestCount}
                         </span>
                     )}
