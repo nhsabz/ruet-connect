@@ -11,7 +11,7 @@ import { ItemCard } from "@/components/ItemCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Phone, Edit, Save } from "lucide-react";
+import { Phone, Edit, Save, X } from "lucide-react";
 
 export default function ProfilePage() {
   const { user, items, requests, updateContactNumber } = useAppContext();
@@ -150,8 +150,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-// Dummy X icon for the edit form
-const X = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-)
