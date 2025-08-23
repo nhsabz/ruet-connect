@@ -20,6 +20,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_EMAILS } from "@/lib/config";
 
+// --- Demo Account ---
+const DEMO_STUDENT_ID = "2103141";
+const DEMO_PASSWORD = "12345678";
+
 interface AppContextType {
   user: User | null;
   isAdmin: boolean;
@@ -81,16 +85,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (ADMIN_EMAILS.includes(email)) {
         return email.split('@')[0];
     }
-    // Keep this for backward compatibility with old student emails
-    const studentMatch = email.match(/^(\d{7})@student\.ruet\.ac\.bd$/);
-    if (studentMatch) return studentMatch[1];
-    
+    // Handle demo user
+    const demoProfile = Object.values(userProfiles).find(p => p.email === email);
+    if (demoProfile) {
+        const id = Object.keys(userProfiles).find(key => userProfiles[key] === demoProfile);
+        if (id) return id;
+    }
+
     // Generic email handling
     return email.split('@')[0];
   }
 
   const getUserById = (userId: string): User | undefined => {
-     const profile = Object.values(userProfiles).find(p => getUserId(p.email) === userId);
+     const profile = userProfiles[userId];
     if (profile) {
       return {
         id: userId,
@@ -111,6 +118,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
       toast({ title: "Login Failed", description: "Password is required.", variant: "destructive" });
       return false;
     }
+
+    // Handle Demo Account Login
+    if (email === DEMO_STUDENT_ID && password === DEMO_PASSWORD) {
+        const demoUserEmail = userProfiles[DEMO_STUDENT_ID]?.email;
+        if (!demoUserEmail) {
+             toast({ title: "Login Failed", description: "Demo account not configured correctly.", variant: "destructive" });
+             return false;
+        }
+        try {
+            await signInWithEmailAndPassword(auth, demoUserEmail, DEMO_PASSWORD);
+             toast({ title: "Login Successful", description: "Welcome back, Demo User!" });
+             router.push("/");
+             return true;
+        } catch (error: any) {
+             // If demo user doesn't exist in Firebase Auth, create it.
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                 try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, demoUserEmail, DEMO_PASSWORD);
+                    // Manually "verify" email for demo user for simplicity
+                    await sendEmailVerification(userCredential.user); 
+                    // This is a mock verification for the demo user. In a real scenario, you wouldn't do this.
+                     userCredential.user.emailVerified = true; 
+                    toast({ title: "Demo Account Created", description: "Logging you in..." });
+                    await signInWithEmailAndPassword(auth, demoUserEmail, DEMO_PASSWORD);
+                    router.push("/");
+                    return true;
+                 } catch (signupError: any) {
+                    toast({ title: "Demo Setup Failed", description: signupError.message, variant: "destructive" });
+                    return false;
+                 }
+            }
+            toast({ title: "Login Failed", description: "Invalid credentials for demo account.", variant: "destructive" });
+            return false;
+        }
+    }
+
+
+    // Standard Login
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
        if (!userCredential.user.emailVerified) {

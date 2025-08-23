@@ -23,7 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 
 const formSchema = z.object({
-  email: z.string().email("Invalid email address."),
+  email: z.string().min(1, "Student ID or Email is required."),
   password: z.string().min(8, "Password must be at least 8 characters."),
 });
 
@@ -56,6 +56,11 @@ export default function LoginPage() {
 
   const handlePasswordReset = async () => {
     const email = form.getValues("email");
+    // A simple check if it looks like an email before sending.
+    if (!email.includes('@')) {
+        form.setError("email", { type: "manual", message: "Please enter a valid email address to reset password." });
+        return;
+    }
     const { success } = z.string().email().safeParse(email);
     if (!success) {
       form.trigger("email");
@@ -69,7 +74,10 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">Login to RUET Connect</CardTitle>
-          <CardDescription>Enter your credentials to access your account.</CardDescription>
+          <CardDescription>
+              Enter your credentials to access your account.
+              For demo, use ID: <strong>2103141</strong> and Password: <strong>12345678</strong>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {showVerificationAlert && (
@@ -88,9 +96,9 @@ export default function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Student ID / Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., user@example.com" {...field} />
+                      <Input placeholder="e.g., 2103141 or user@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
