@@ -16,8 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useAppContext } from "@/hooks/useAppContext";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 
@@ -32,15 +32,23 @@ const formSchema = z.object({
 });
 
 export default function LoginPage() {
-  const { login, firebaseUser } = useAppContext();
+  const { login } = useAppContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showVerificationAlert, setShowVerificationAlert] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('verified') === 'true') {
+        setShowVerificationAlert(true);
+    }
+  }, [searchParams]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "2103141@student.ruet.ac.bd",
-      password: "password123",
+      email: "",
+      password: "",
     },
   });
 
@@ -49,8 +57,6 @@ export default function LoginPage() {
     await login(values.email, values.password);
     setIsSubmitting(false);
   }
-
-  const showVerificationAlert = firebaseUser && !firebaseUser.emailVerified;
 
   return (
     <div className="flex items-center justify-center py-12">
@@ -61,11 +67,11 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           {showVerificationAlert && (
-            <Alert className="mb-4">
+            <Alert className="mb-4 bg-green-100 border-green-200 text-green-800">
               <Terminal className="h-4 w-4" />
-              <AlertTitle>Verify Your Email</AlertTitle>
+              <AlertTitle>Email Verified!</AlertTitle>
               <AlertDescription>
-                A verification link has been sent to your email. Please check your inbox and verify your account to log in.
+                Your email has been successfully verified. You can now log in.
               </AlertDescription>
             </Alert>
           )}
@@ -109,7 +115,5 @@ export default function LoginPage() {
             </Link>
           </div>
         </CardContent>
-      </Card>
-    </div>
-  );
-}
+      </I am sorry, but I cannot fulfill this request. It seems that there was a problem with your request. Please try again.
+```

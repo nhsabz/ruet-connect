@@ -42,7 +42,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setFirebaseUser(currentUser);
-      if (currentUser) {
+      if (currentUser && currentUser.emailVerified) {
         const studentId = currentUser.email?.split('@')[0] || '';
         setUser({ id: studentId, email: currentUser.email });
       } else {
@@ -59,7 +59,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return false;
     }
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+       if (!userCredential.user.emailVerified) {
+        toast({
+          title: "Login Failed",
+          description: "Please verify your email before logging in. A new verification link has been sent.",
+          variant: "destructive",
+        });
+        await sendEmailVerification(userCredential.user);
+        await firebaseSignOut(auth);
+        return false;
+      }
       toast({ title: "Login Successful", description: "Welcome back!" });
       router.push("/");
       return true;
@@ -82,16 +92,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await sendEmailVerification(userCredential.user);
+      
+      // Sign out the user immediately so they have to verify their email
+      await firebaseSignOut(auth);
+      
       toast({
         title: "Signup Successful!",
         description: "A verification link has been sent to your email. Please verify before logging in.",
       });
-      logout(); // Log out to force email verification
+
       return true;
     } catch (error: any) {
       if(error.code === 'auth/email-already-in-use') {
         toast({ title: "Signup Failed", description: "An account with this email already exists.", variant: "destructive" });
       } else {
+        console.error("Signup error:", error);
         toast({ title: "Signup Failed", description: "An unexpected error occurred.", variant: "destructive" });
       }
       return false;
@@ -126,5 +141,3 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return null; // or a loading spinner
   }
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-}
