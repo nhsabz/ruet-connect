@@ -30,7 +30,7 @@ interface AppContextType {
   sendPasswordReset: (email: string) => Promise<void>;
   items: Item[];
   addItem: (item: NewItem) => Promise<void>;
-  deleteItem: (itemId: string) => Promise<void>;
+  deleteItem: (itemId: string, itemUserId: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
   requests: ClaimRequest[];
   updateContactNumber: (newNumber: string) => Promise<void>;
@@ -202,9 +202,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setItems(prevItems => [newItem, ...prevItems]);
   };
   
-  const deleteItem = async (itemId: string) => {
-    if (!isAdmin) {
-        toast({ title: "Permission Denied", description: "You are not authorized to delete items.", variant: "destructive"});
+  const deleteItem = async (itemId: string, itemUserId: string) => {
+    const canDelete = isAdmin || user?.id === itemUserId;
+    if (!canDelete) {
+        toast({ title: "Permission Denied", description: "You are not authorized to delete this item.", variant: "destructive"});
         return;
     }
     setItems(prevItems => prevItems.filter(item => item.id !== itemId));

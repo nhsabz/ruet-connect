@@ -32,6 +32,7 @@ export function ItemCard({ item }: ItemCardProps) {
   const router = useRouter();
   
   const itemOwner = getUserById(item.userId);
+  const canDelete = isAdmin || user?.id === item.userId;
 
   const handleClaimRequest = () => {
     if (!user) {
@@ -60,7 +61,7 @@ export function ItemCard({ item }: ItemCardProps) {
   };
   
   const handleDelete = () => {
-    deleteItem(item.id);
+    deleteItem(item.id, item.userId);
   }
 
   const categoryVariants: { [key in Item["category"]]: "default" | "secondary" | "destructive" | "outline" } = {
@@ -108,10 +109,10 @@ export function ItemCard({ item }: ItemCardProps) {
             <Button className="w-full" onClick={handleClaimRequest} disabled={user?.id === item.userId}>
             Claim / Request
             </Button>
-            {isAdmin && (
+            {canDelete && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon" title="Delete as Admin">
+                    <Button variant="destructive" size="icon" title="Delete Item">
                         <Trash2 />
                     </Button>
                   </AlertDialogTrigger>
