@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 
 interface AppContextType {
   user: User | null;
-  login: (id: string) => boolean;
+  login: (id: string, password?: string) => boolean;
   logout: () => void;
   signup: (id: string) => boolean;
   items: Item[];
@@ -35,19 +35,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIsLoaded(true);
   }, []);
 
-  const login = (id: string): boolean => {
-    // Demo account check
-    if (id === '2103141') {
-      const userToLogin: User = { id };
-      setUser(userToLogin);
-      localStorage.setItem("ruet-connect-user", id);
-      return true;
-    }
+  const login = (id: string, password?: string): boolean => {
     const existingUser = mockUsers.find((u) => u.id === id);
     if (existingUser) {
-      setUser(existingUser);
-      localStorage.setItem("ruet-connect-user", id);
-      return true;
+      // For demo purposes, any 8-char password for existing mock users is fine
+      // The demo account has a specific password
+      const passwordIsValid = id === '2103141' ? password === '12345678' : !!password && password.length >= 8;
+
+      if (passwordIsValid) {
+        setUser(existingUser);
+        localStorage.setItem("ruet-connect-user", id);
+        return true;
+      }
     }
     return false;
   };

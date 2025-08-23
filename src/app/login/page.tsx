@@ -38,25 +38,12 @@ export default function LoginPage() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // Check for demo account first
-    if (values.studentId === "2103141" && values.password === "12345678") {
-      const success = login(values.studentId);
-      if (success) {
-        toast({ title: "Login Successful", description: "Welcome back!" });
-        router.push("/");
-      } else {
-        toast({ title: "Login Failed", description: "An unexpected error occurred.", variant: "destructive" });
-      }
-      return;
-    }
-
-    // Handle other users (mocked)
-    const success = login(values.studentId);
+    const success = login(values.studentId, values.password);
     if (success) {
-        toast({ title: "Login Successful", description: "Welcome back!" });
-        router.push("/");
+      toast({ title: "Login Successful", description: "Welcome back!" });
+      router.push("/");
     } else {
-        toast({ title: "Login Failed", description: "Invalid Student ID or password.", variant: "destructive" });
+      toast({ title: "Login Failed", description: "Invalid Student ID or password.", variant: "destructive" });
     }
   }
 
