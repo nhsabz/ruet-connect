@@ -21,10 +21,11 @@ export interface NewItem {
 
 export interface User {
   id: string; // Student ID
+  email: string | null;
 }
 
 export interface ClaimRequest {
-  id: string;
+  id:string;
   itemId: string;
   itemTitle: string;
   requesterId: string;

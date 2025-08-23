@@ -17,22 +17,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-const studentIdSchema = z.string().length(7, "Student ID must be 7 digits.").refine(id => {
-    try {
-        const series = parseInt(id.substring(0, 2));
-        const dept = parseInt(id.substring(2, 4));
-        const roll = parseInt(id.substring(4, 7));
-        return series >= 20 && series <= 30 && dept >= 0 && dept <= 13 && roll >= 1 && roll <= 183;
-    } catch {
-        return false;
-    }
-}, "Invalid Student ID format. (Series: 20-30, Dept: 00-13, Roll: 001-183)");
+const emailSchema = z.string().email("Invalid email address.").refine(email => {
+    const regex = /^\d{7}@student\.ruet\.ac\.bd$/;
+    return regex.test(email);
+}, "Email must be a valid RUET student email (e.g., 2103141@student.ruet.ac.bd).");
 
 
 const formSchema = z.object({
-  studentId: studentIdSchema,
+  email: emailSchema,
   password: z.string().min(8, "Password must be at least 8 characters."),
 });
 
@@ -40,23 +35,23 @@ export default function SignupPage() {
     const { signup } = useAppContext();
     const router = useRouter();
     const { toast } = useToast();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            studentId: "",
+            email: "",
             password: "",
         },
     });
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        const success = signup(values.studentId);
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        setIsSubmitting(true);
+        const success = await signup(values.email, values.password);
         if (success) {
-            toast({ title: "Account Created", description: "Welcome to RUET Connect!" });
-            router.push("/");
-        } else {
-            toast({ title: "Signup Failed", description: "An account with this Student ID already exists.", variant: "destructive" });
+            router.push("/login");
         }
+        setIsSubmitting(false);
     }
 
   return (
@@ -65,7 +60,7 @@ export default function SignupPage() {
         <CardHeader>
           <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
           <CardDescription>
-            Use your official RUET Student ID to join.
+            Use your official RUET Student email to join.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -73,12 +68,12 @@ export default function SignupPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="studentId"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Student ID</FormLabel>
+                    <FormLabel>Student Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., 2103141" {...field} />
+                      <Input placeholder="e.g., 2103141@student.ruet.ac.bd" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -97,8 +92,8 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Sign Up
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Signing up...' : 'Sign Up'}
               </Button>
             </form>
           </Form>

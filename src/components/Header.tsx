@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export function Header() {
   const { user, logout } = useAppContext();
@@ -74,7 +74,7 @@ export function Header() {
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">Student ID</p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {user.id}
+                        {user.email}
                       </p>
                     </div>
                   </DropdownMenuLabel>

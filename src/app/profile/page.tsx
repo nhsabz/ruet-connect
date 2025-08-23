@@ -44,6 +44,7 @@ export default function ProfilePage() {
           <div>
             <CardTitle className="text-3xl font-headline">My Profile</CardTitle>
             <CardDescription className="text-lg">Student ID: {user.id}</CardDescription>
+            <CardDescription className="text-md text-muted-foreground">{user.email}</CardDescription>
           </div>
         </CardHeader>
       </Card>

@@ -17,35 +17,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from "lucide-react";
+
+const emailSchema = z.string().email("Invalid email address.").refine(email => {
+    const regex = /^\d{7}@student\.ruet\.ac\.bd$/;
+    return regex.test(email);
+}, "Email must be a valid RUET student email (e.g., 2103141@student.ruet.ac.bd).");
 
 const formSchema = z.object({
-  studentId: z.string().min(7, "Student ID must be 7 digits.").max(7, "Student ID must be 7 digits."),
+  email: emailSchema,
   password: z.string().min(8, "Password must be at least 8 characters."),
 });
 
 export default function LoginPage() {
-  const { login } = useAppContext();
+  const { login, firebaseUser } = useAppContext();
   const router = useRouter();
-  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      studentId: "2103141",
-      password: "12345678",
+      email: "2103141@student.ruet.ac.bd",
+      password: "password123",
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    const success = login(values.studentId, values.password);
-    if (success) {
-      toast({ title: "Login Successful", description: "Welcome back!" });
-      router.push("/");
-    } else {
-      toast({ title: "Login Failed", description: "Invalid Student ID or password.", variant: "destructive" });
-    }
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
+    await login(values.email, values.password);
+    setIsSubmitting(false);
   }
+
+  const showVerificationAlert = firebaseUser && !firebaseUser.emailVerified;
 
   return (
     <div className="flex items-center justify-center py-12">
@@ -55,16 +60,25 @@ export default function LoginPage() {
           <CardDescription>Enter your student credentials to access your account.</CardDescription>
         </CardHeader>
         <CardContent>
+          {showVerificationAlert && (
+            <Alert className="mb-4">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Verify Your Email</AlertTitle>
+              <AlertDescription>
+                A verification link has been sent to your email. Please check your inbox and verify your account to log in.
+              </AlertDescription>
+            </Alert>
+          )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="studentId"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Student ID</FormLabel>
+                    <FormLabel>Student Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., 2103141" {...field} />
+                      <Input placeholder="e.g., 2103141@student.ruet.ac.bd" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -83,8 +97,8 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Login
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Logging in...' : 'Login'}
               </Button>
             </form>
           </Form>
