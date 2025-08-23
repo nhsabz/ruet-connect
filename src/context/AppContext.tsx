@@ -14,6 +14,7 @@ import {
   sendEmailVerification,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
+  deleteUser,
   type User as FirebaseUser
 } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +31,7 @@ interface AppContextType {
   items: Item[];
   addItem: (item: NewItem) => Promise<void>;
   deleteItem: (itemId: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
   requests: ClaimRequest[];
   updateContactNumber: (newNumber: string) => Promise<void>;
   getUserById: (userId: string) => User | undefined;
@@ -55,8 +57,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setFirebaseUser(currentUser);
       if (currentUser && currentUser.emailVerified && currentUser.email) {
-        const studentId = currentUser.email.split('@')[0];
-        const profile = Object.values(userProfiles).find(p => p.email === currentUser.email);
+        const studentId = getUserId(currentUser.email);
+        const profile = userProfiles[studentId];
         setUser({ 
             id: studentId, 
             email: currentUser.email,
@@ -73,20 +75,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
   
   const getUserId = (email: string) => {
-      if (ADMIN_EMAILS.includes(email)) {
-          return email.split('@')[0];
-      }
-      return email.split('@')[0];
+    if (ADMIN_EMAILS.includes(email)) {
+        return email.split('@')[0];
+    }
+    const match = email.match(/^(\d{7})@student\.ruet\.ac\.bd$/);
+    return match ? match[1] : email.split('@')[0];
   }
 
   const getUserById = (userId: string): User | undefined => {
-    const profile = Object.values(userProfiles).find(p => p.email.split('@')[0] === userId || getUserId(p.email) === userId);
+     const profile = Object.values(userProfiles).find(p => getUserId(p.email) === userId);
     if (profile) {
       return {
         id: userId,
         email: profile.email,
         contactNumber: profile.contactNumber,
       };
+    }
+    // Fallback for users that might exist in auth but not in mock profiles
+    if(user && getUserId(user.email) === userId) {
+        return user;
     }
     return undefined;
   };
@@ -204,6 +211,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toast({ title: "Item Deleted", description: "The item has been successfully removed."});
   }
 
+  const deleteAccount = async () => {
+    const currentFirebaseUser = auth.currentUser;
+    if (!currentFirebaseUser) {
+      toast({ title: "Error", description: "You must be logged in to delete your account.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await deleteUser(currentFirebaseUser);
+      const userId = getUserId(currentFirebaseUser.email!);
+      delete userProfiles[userId];
+      setItems(prev => prev.filter(item => item.userId !== userId));
+      toast({ title: "Account Deleted", description: "Your account has been permanently deleted." });
+      router.push("/signup");
+    } catch (error: any) {
+      console.error("Error deleting account:", error);
+      toast({
+        title: "Account Deletion Failed",
+        description: "An error occurred while deleting your account. You may need to log in again to complete this action.",
+        variant: "destructive",
+      });
+       if (error.code === 'auth/requires-recent-login') {
+         logout();
+       }
+    }
+  };
+
   const updateContactNumber = async (newNumber: string) => {
     if (user) {
         // Update in-memory user profiles
@@ -219,7 +253,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, requests, updateContactNumber, getUserById };
+  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, updateContactNumber, getUserById };
 
   if (!isLoaded) {
     return null; // or a loading spinner

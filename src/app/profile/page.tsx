@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,16 +6,26 @@ import { useRouter } from "next/navigation";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ItemCard } from "@/components/ItemCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Phone, Edit, Save, X } from "lucide-react";
+import { Phone, Edit, Save, X, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ProfilePage() {
-  const { user, items, requests, updateContactNumber } = useAppContext();
+  const { user, items, requests, updateContactNumber, deleteAccount } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   const [isEditingContact, setIsEditingContact] = useState(false);
@@ -42,6 +53,10 @@ export default function ProfilePage() {
         });
         setIsEditingContact(false);
     }
+  }
+
+  const handleDeleteAccount = async () => {
+    await deleteAccount();
   }
 
   if (!user) {
@@ -91,6 +106,30 @@ export default function ProfilePage() {
             </div>
           </div>
         </CardHeader>
+        <CardFooter className="border-t pt-6 flex justify-end">
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                        <AlertTriangle className="mr-2 h-4 w-4" /> Delete Account
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your
+                        account and remove all your data from our servers.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteAccount}>
+                        Yes, delete my account
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </CardFooter>
       </Card>
 
       <Tabs defaultValue="my-posts" className="w-full">
