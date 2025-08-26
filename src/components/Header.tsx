@@ -32,6 +32,10 @@ export function Header() {
     logout();
   };
 
+  const handleNotificationClick = () => {
+    router.push('/profile?tab=requests');
+  }
+
   return (
     <header className="bg-card shadow-sm sticky top-0 z-40">
       <div className="container mx-auto px-4">
@@ -63,7 +67,7 @@ export function Header() {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <Button variant="ghost" size="icon" className="relative" onClick={() => router.push('/profile')}>
+                <Button variant="ghost" size="icon" className="relative" onClick={handleNotificationClick}>
                     <Bell className="h-5 w-5" />
                     {pendingRequestCount > 0 && (
                         <span className="absolute top-1 right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">

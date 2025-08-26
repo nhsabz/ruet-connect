@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -28,9 +28,18 @@ import {
 export default function ProfilePage() {
   const { user, items, requests, updateContactNumber, deleteAccount } = useAppContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [newContactNumber, setNewContactNumber] = useState(user?.contactNumber || "");
+  const [activeTab, setActiveTab] = useState("my-posts");
+  
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === 'requests') {
+        setActiveTab('my-requests');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!user) {
@@ -133,7 +142,7 @@ export default function ProfilePage() {
         </CardFooter>
       </Card>
 
-      <Tabs defaultValue="my-posts" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="my-posts">My Posts ({myItems.length})</TabsTrigger>
           <TabsTrigger value="my-requests">Requests Received ({myRequests.length})</TabsTrigger>
