@@ -72,26 +72,27 @@ export default function PostPage() {
 
   useEffect(() => {
     const getCameraPermission = async () => {
-        if (view !== 'camera' || hasCameraPermission) return;
-        
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({video: { facingMode: 'environment' }});
-            setHasCameraPermission(true);
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
-        } catch (error) {
-            console.error('Error accessing camera:', error);
-            setHasCameraPermission(false);
-            toast({
-                variant: 'destructive',
-                title: 'Camera Access Denied',
-                description: 'Please enable camera permissions in your browser settings.',
-            });
-            setView('upload');
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({video: true});
+        setHasCameraPermission(true);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
         }
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please enable camera permissions in your browser settings to use this app.',
+        });
+      }
     };
-    getCameraPermission();
+
+    if (view === 'camera') {
+        getCameraPermission();
+    }
 
     return () => {
         // Cleanup: stop video stream when component unmounts or view changes
@@ -100,7 +101,7 @@ export default function PostPage() {
             stream.getTracks().forEach(track => track.stop());
         }
     }
-  }, [view, hasCameraPermission, toast]);
+  }, [view, toast]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -368,10 +369,10 @@ export default function PostPage() {
                 render={() => (
                   <FormItem>
                     <FormLabel>Item Image</FormLabel>
-                    {view === 'upload' && (
+                    {view === 'upload' ? (
                       <div className="space-y-2">
-                        <FormControl>
-                          <div className="w-full">
+                        <div className="w-full">
+                          <FormControl>
                             <label htmlFor="file-upload" className="relative cursor-pointer rounded-lg border-2 border-dashed border-muted-foreground/50 w-full aspect-video flex flex-col items-center justify-center text-center p-4 hover:border-primary transition-colors">
                               {preview ? (
                                 <Image src={preview} alt="Image preview" fill className="object-contain rounded-md" />
@@ -383,15 +384,14 @@ export default function PostPage() {
                                 </div>
                               )}
                             </label>
-                            <Input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/png, image/jpeg" disabled={isSubmitting} />
-                          </div>
-                        </FormControl>
+                           </FormControl>
+                          <Input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/png, image/jpeg" disabled={isSubmitting} />
+                        </div>
                         <Button type="button" variant="outline" className="w-full" onClick={() => setView('camera')}>
                             <Camera className="mr-2"/> Use Camera
                         </Button>
                       </div>
-                    )}
-                    {view === 'camera' && (
+                    ) : (
                         <div className="space-y-2">
                              <div className="w-full aspect-video bg-black rounded-md overflow-hidden relative">
                                 <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
