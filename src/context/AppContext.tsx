@@ -2,10 +2,23 @@
 "use client";
 
 import { createContext, useState, useEffect, type ReactNode } from "react";
-import type { User, Item, ClaimRequest, NewItem } from "@/lib/types";
+import { 
+    collection, 
+    doc, 
+    setDoc, 
+    getDoc, 
+    addDoc, 
+    getDocs, 
+    query, 
+    where, 
+    deleteDoc,
+    Timestamp,
+    orderBy
+} from "firebase/firestore";
+import type { User, Item, ClaimRequest, NewItem, Role } from "@/lib/types";
 import { mockItems, mockRequests, mockUserProfiles } from "@/lib/mockData";
 import { useRouter } from "next/navigation";
-import { storage, auth } from "@/lib/firebase";
+import { storage, auth, db } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
   onAuthStateChanged, 
@@ -15,6 +28,8 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   deleteUser,
+  GoogleAuthProvider,
+  signInWithPopup,
   type User as FirebaseUser
 } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -72,7 +87,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: studentId,
         name: profile.name,
         email: profile.email,
-        contactNumber: profile.contactNumber
+        contactNumber: profile.contactNumber,
+        role: ADMIN_EMAILS.includes(fbUser.email) ? 'teacher' : 'student',
     };
 
     setUser(appUser);
@@ -115,6 +131,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         name: profile.name,
         email: profile.email,
         contactNumber: profile.contactNumber,
+        role: ADMIN_EMAILS.includes(profile.email) ? 'teacher' : 'student',
       };
     }
     if(user && getUserId(user.email) === userId) {
@@ -234,28 +251,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
         throw err;
     }
 
-    let imageUrl = 'https://placehold.co/600x400.png';
-    if (itemData.image) {
-        try {
-            const storageRef = ref(storage, `images/${user.id}/${Date.now()}_${itemData.image.name}`);
-            const snapshot = await uploadBytes(storageRef, itemData.image);
-            imageUrl = await getDownloadURL(snapshot.ref);
-        } catch (error) {
-            console.error("Firebase Storage Error:", error);
-            throw error;
-        }
+    try {
+        const newItemData = {
+            title: itemData.title,
+            description: itemData.description,
+            category: itemData.category,
+            imageUrl: itemData.imageUrl,
+            userId: user.id,
+            createdAt: Timestamp.now(),
+        };
+
+        const docRef = await addDoc(collection(db, "items"), newItemData);
+
+        // To keep the UI in sync without re-fetching, we can create a client-side representation.
+        const newItem: Item = {
+            id: docRef.id,
+            ...newItemData,
+            createdAt: newItemData.createdAt.toDate(), // Convert timestamp to Date for client-side use
+        };
+
+        setItems(prevItems => [newItem, ...prevItems].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+
+    } catch (error) {
+        console.error("Error adding document: ", error);
+        throw new Error("Failed to save item to database.");
     }
-    
-    const newItem: Item = {
-        id: (items.length + 1).toString(),
-        title: itemData.title,
-        description: itemData.description,
-        category: itemData.category,
-        imageUrl,
-        createdAt: new Date(),
-        userId: user.id,
-    };
-    setItems(prevItems => [newItem, ...prevItems]);
   };
   
   const deleteItem = async (itemId: string, itemUserId: string) => {

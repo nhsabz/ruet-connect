@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -25,6 +24,11 @@ import { useToast } from "@/hooks/use-toast";
 import type { Category } from "@/lib/types";
 import Image from "next/image";
 import { UploadCloud } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+
+// Cloudinary settings
+const CLOUDINARY_CLOUD_NAME = "dxlms92vi"; 
+const CLOUDINARY_UPLOAD_PRESET = "ruet-connect";
 
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
@@ -43,6 +47,7 @@ export default function PostPage() {
   const { toast } = useToast();
   const [preview, setPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -75,24 +80,79 @@ export default function PostPage() {
     }
   };
 
+  const uploadToCloudinary = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+        // Add other unsigned upload options if needed, based on your preset settings
+        // formData.append("overwrite", "false"); 
+        // formData.append("use_filename", "false");
+        // formData.append("unique_filename", "false");
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, true);
+        
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+                const progress = Math.round((event.loaded / event.total) * 100);
+                setUploadProgress(progress);
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status === 200) {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response.secure_url);
+            } else {
+                const errorResponse = JSON.parse(xhr.responseText);
+                reject(new Error(errorResponse.error.message || "Cloudinary upload failed"));
+            }
+        };
+        
+        xhr.onerror = () => {
+            reject(new Error("An unknown error occurred during the upload."));
+        };
+        
+        xhr.send(formData);
+    });
+  }
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
+    setUploadProgress(0);
+
     try {
-      await addItem(values);
-      toast({
-          title: "Item Posted!",
-          description: "Your item has been successfully listed."
-      });
-      router.push("/browse");
-    } catch (error) {
+        let imageUrl = 'https://placehold.co/600x400.png'; // Default placeholder
+
+        if (values.image) {
+            imageUrl = await uploadToCloudinary(values.image);
+        }
+
+        // Now add the item with the final imageUrl
+        await addItem({
+            title: values.title,
+            description: values.description,
+            category: values.category,
+            imageUrl: imageUrl,
+        });
+
+        toast({
+            title: "Item Posted!",
+            description: "Your item has been successfully listed."
+        });
+        router.push("/browse");
+
+    } catch (error: any) {
         console.error("Failed to post item:", error);
         toast({
             title: "Upload Failed",
-            description: "There was a problem uploading your item. Please try again.",
+            description: error.message || "There was a problem uploading your item. Please try again.",
             variant: "destructive"
-        })
+        });
     } finally {
         setIsSubmitting(false);
+        setUploadProgress(0);
     }
   }
   
@@ -185,15 +245,24 @@ export default function PostPage() {
                             </div>
                           )}
                         </label>
-                        <Input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" />
+                        <Input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" disabled={isSubmitting} />
                       </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {isSubmitting && form.getValues("image") && (
+                <div className="space-y-2">
+                    <Label>Upload Progress</Label>
+                    <Progress value={uploadProgress} />
+                    <p className="text-sm text-center text-muted-foreground">{uploadProgress}% complete</p>
+                </div>
+              )}
+
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Posting...' : 'Post Item'}
+                {isSubmitting ? (form.getValues("image") ? 'Uploading...' : 'Posting...') : 'Post Item'}
               </Button>
             </form>
           </Form>

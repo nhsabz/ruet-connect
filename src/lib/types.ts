@@ -1,5 +1,6 @@
 
 export type Category = 'Lost' | 'Found' | 'Lend' | 'Donate';
+export type Role = 'student' | 'teacher';
 
 export interface Item {
   id: string;
@@ -16,7 +17,7 @@ export interface NewItem {
   title: string;
   description: string;
   category: Category;
-  image?: File;
+  imageUrl: string;
 }
 
 export interface User {
@@ -24,6 +25,7 @@ export interface User {
   name?: string;
   email: string;
   contactNumber?: string;
+  role: Role;
 }
 
 export interface ClaimRequest {
