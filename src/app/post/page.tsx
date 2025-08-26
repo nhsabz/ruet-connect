@@ -369,25 +369,27 @@ export default function PostPage() {
                   <FormItem>
                     <FormLabel>Item Image</FormLabel>
                     {view === 'upload' && (
-                      <FormControl>
-                        <div className="w-full">
-                          <label htmlFor="file-upload" className="relative cursor-pointer rounded-lg border-2 border-dashed border-muted-foreground/50 w-full aspect-video flex flex-col items-center justify-center text-center p-4 hover:border-primary transition-colors">
-                            {preview ? (
-                              <Image src={preview} alt="Image preview" fill className="object-contain rounded-md" />
-                            ) : (
-                              <div className="space-y-2 text-muted-foreground">
-                                <UploadCloud className="mx-auto h-12 w-12" />
-                                <p className="font-semibold">Click to upload an image</p>
-                                <p className="text-xs">PNG, JPG, or use Camera</p>
-                              </div>
-                            )}
-                          </label>
-                          <Input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/png, image/jpeg" disabled={isSubmitting} />
-                        </div>
-                        <Button type="button" variant="outline" className="w-full mt-2" onClick={() => setView('camera')}>
+                      <div className="space-y-2">
+                        <FormControl>
+                          <div className="w-full">
+                            <label htmlFor="file-upload" className="relative cursor-pointer rounded-lg border-2 border-dashed border-muted-foreground/50 w-full aspect-video flex flex-col items-center justify-center text-center p-4 hover:border-primary transition-colors">
+                              {preview ? (
+                                <Image src={preview} alt="Image preview" fill className="object-contain rounded-md" />
+                              ) : (
+                                <div className="space-y-2 text-muted-foreground">
+                                  <UploadCloud className="mx-auto h-12 w-12" />
+                                  <p className="font-semibold">Click to upload an image</p>
+                                  <p className="text-xs">PNG, JPG, or use Camera</p>
+                                </div>
+                              )}
+                            </label>
+                            <Input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/png, image/jpeg" disabled={isSubmitting} />
+                          </div>
+                        </FormControl>
+                        <Button type="button" variant="outline" className="w-full" onClick={() => setView('camera')}>
                             <Camera className="mr-2"/> Use Camera
                         </Button>
-                      </FormControl>
+                      </div>
                     )}
                     {view === 'camera' && (
                         <div className="space-y-2">
@@ -438,3 +440,4 @@ export default function PostPage() {
     </div>
   );
 }
+
