@@ -5,7 +5,7 @@ import { createContext, useState, useEffect, type ReactNode } from "react";
 import type { User, Item, ClaimRequest, NewItem } from "@/lib/types";
 import { mockItems, mockRequests, mockUserProfiles } from "@/lib/mockData";
 import { useRouter } from "next/navigation";
-import { storage, auth, db } from "@/lib/firebase";
+import { storage, auth } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
   onAuthStateChanged, 
@@ -15,11 +15,8 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   deleteUser,
-  GoogleAuthProvider,
-  signInWithPopup,
   type User as FirebaseUser
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"; 
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_EMAILS } from "@/lib/config";
 
@@ -32,7 +29,6 @@ interface AppContextType {
   isAdmin: boolean;
   firebaseUser: FirebaseUser | null;
   login: (email: string, password?: string) => Promise<boolean>;
-  signInWithGoogle: () => Promise<void>;
   logout: () => void;
   signup: (name: string, email: string, password: string, contactNumber: string) => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<void>;
@@ -49,7 +45,7 @@ interface AppContextType {
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
-let userProfiles: {[key: string]: {name: string, email: string, contactNumber: string, role: "student" | "teacher"}} = mockUserProfiles;
+let userProfiles: {[key: string]: {name: string, email: string, contactNumber: string}} = mockUserProfiles;
 
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -62,35 +58,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleUserSignIn = async (fbUser: FirebaseUser) => {
+  const handleUserSignIn = (fbUser: FirebaseUser) => {
     if (!fbUser.email) return;
 
-    const userRef = doc(db, "users", fbUser.uid);
-    const userDoc = await getDoc(userRef);
-    let appUser: User;
+    const studentId = getUserId(fbUser.email);
+    const profile = userProfiles[studentId] || { 
+      name: fbUser.displayName || 'RUET User', 
+      email: fbUser.email, 
+      contactNumber: fbUser.phoneNumber || ''
+    };
 
-    if (userDoc.exists()) {
-      appUser = userDoc.data() as User;
-    } else {
-      // This path is for users created via Google Sign-In
-      const email = fbUser.email;
-      const role = email.endsWith('student.ruet.ac.bd') ? 'student' : 'teacher';
-      const studentId = getUserId(email);
-      
-      appUser = {
+    const appUser: User = {
         id: studentId,
-        uid: fbUser.uid,
-        name: fbUser.displayName || 'RUET User',
-        email: email,
-        role: role,
-        contactNumber: fbUser.phoneNumber || ''
-      };
-      
-      await setDoc(userRef, {
-        ...appUser,
-        createdAt: serverTimestamp(),
-      });
-    }
+        name: profile.name,
+        email: profile.email,
+        contactNumber: profile.contactNumber
+    };
 
     setUser(appUser);
     setIsAdmin(ADMIN_EMAILS.includes(fbUser.email));
@@ -132,44 +115,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         name: profile.name,
         email: profile.email,
         contactNumber: profile.contactNumber,
-        role: profile.role,
       };
     }
     if(user && getUserId(user.email) === userId) {
         return user;
     }
     return undefined;
-  };
-  
-  const signInWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-        prompt: 'select_account'
-    });
-    try {
-        const result = await signInWithPopup(auth, provider);
-        const email = result.user.email;
-
-        if (!email || !email.endsWith('.ruet.ac.bd')) {
-            await firebaseSignOut(auth);
-            toast({
-                title: "Sign-In Failed",
-                description: "Access is restricted to RUET email domains only.",
-                variant: "destructive"
-            });
-            return;
-        }
-        
-        await handleUserSignIn(result.user);
-
-    } catch (error: any) {
-        console.error("Google Sign-In Error: ", error);
-        toast({
-            title: "Sign-In Error",
-            description: "An error occurred during Google Sign-In. Please try again.",
-            variant: "destructive"
-        })
-    }
   };
 
   const login = async (email: string, password?: string): Promise<boolean> => {
@@ -235,21 +186,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      const userRef = doc(db, "users", userCredential.user.uid);
       const studentId = getUserId(email);
-      const newUser: User = {
-        id: studentId,
-        uid: userCredential.user.uid,
-        name,
-        email,
-        contactNumber,
-        role: email.endsWith('student.ruet.ac.bd') ? 'student' : 'teacher'
-      }
-
-      await setDoc(userRef, {
-        ...newUser,
-        createdAt: serverTimestamp(),
-      });
+      userProfiles[studentId] = { name, email, contactNumber };
 
       await sendEmailVerification(userCredential.user);
       await firebaseSignOut(auth);
@@ -381,16 +319,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const updateContactNumber = async (newNumber: string) => {
-    if (user && user.uid) {
-        const userRef = doc(db, "users", user.uid);
-        try {
-          await setDoc(userRef, { contactNumber: newNumber }, { merge: true });
-          setUser(prevUser => prevUser ? { ...prevUser, contactNumber: newNumber } : null);
-          toast({ title: "Success", description: "Contact number updated." });
-        } catch (error) {
-          console.error("Update contact error: ", error);
-          toast({ title: "Error", description: "Failed to update contact number.", variant: "destructive" });
+    if (user) {
+        // This is a mock update. In a real app, you'd update a database.
+        const updatedUser = { ...user, contactNumber: newNumber };
+        setUser(updatedUser);
+        if (userProfiles[user.id]) {
+            userProfiles[user.id].contactNumber = newNumber;
         }
+        toast({ title: "Success", description: "Contact number updated." });
     }
   };
 
@@ -400,7 +336,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ).length
     : 0;
 
-  const value = { user, isAdmin, firebaseUser, login, signInWithGoogle, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, createRequest, pendingRequestCount, updateContactNumber, getUserById };
+  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, createRequest, pendingRequestCount, updateContactNumber, getUserById };
 
   if (!isLoaded) {
     return null; // or a loading spinner

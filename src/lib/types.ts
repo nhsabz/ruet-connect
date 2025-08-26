@@ -21,11 +21,9 @@ export interface NewItem {
 
 export interface User {
   id: string; // Student ID
-  uid?: string; // Firebase Auth UID
   name?: string;
   email: string;
   contactNumber?: string;
-  role: 'student' | 'teacher';
 }
 
 export interface ClaimRequest {
