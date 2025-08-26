@@ -2,14 +2,14 @@
 "use client";
 
 import Image from "next/image";
-import type { Item } from "@/lib/types";
+import type { Item, User } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter } from "next/navigation";
-import { Phone, Trash2, User } from "lucide-react";
+import { Phone, Trash2, User as UserIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,9 +24,13 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
+import { useState } from "react";
 
 
 interface ItemCardProps {
@@ -37,11 +41,12 @@ export function ItemCard({ item }: ItemCardProps) {
   const { toast } = useToast();
   const { user, getUserById, isAdmin, deleteItem, createRequest } = useAppContext();
   const router = useRouter();
+  const [isOwnerInfoOpen, setIsOwnerInfoOpen] = useState(false);
   
   const itemOwner = getUserById(item.userId);
   const canDelete = isAdmin || user?.id === item.userId;
 
-  const handleClaimRequest = () => {
+  const handleClaimRequest = async () => {
     if (!user) {
         toast({
             title: "Authentication Required",
@@ -61,7 +66,10 @@ export function ItemCard({ item }: ItemCardProps) {
         return;
     }
     
-    createRequest(item);
+    const success = await createRequest(item);
+    if (success) {
+      setIsOwnerInfoOpen(true);
+    }
   };
   
   const handleDelete = () => {
@@ -76,107 +84,133 @@ export function ItemCard({ item }: ItemCardProps) {
   };
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden transition-shadow duration-300 hover:shadow-lg">
-      <CardHeader className="p-0">
-        <Dialog>
-          <DialogTrigger asChild>
-            <div className="relative w-full h-48 cursor-pointer">
-              <Image
-                src={item.imageUrl}
-                alt={item.title}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="object-cover"
-                data-ai-hint={item['data-ai-hint']}
-              />
-            </div>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl p-2">
-             <DialogTitle className="sr-only">{item.title}</DialogTitle>
-             <div className="relative w-full h-[80vh]">
-                <Image 
-                    src={item.imageUrl}
-                    alt={item.title}
-                    fill
-                    sizes="100vw"
-                    className="object-contain"
+    <>
+      <Card className="flex flex-col h-full overflow-hidden transition-shadow duration-300 hover:shadow-lg">
+        <CardHeader className="p-0">
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="relative w-full h-48 cursor-pointer">
+                <Image
+                  src={item.imageUrl}
+                  alt={item.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  className="object-cover"
+                  data-ai-hint={item['data-ai-hint']}
                 />
-             </div>
-          </DialogContent>
-        </Dialog>
-        <div className="p-4 pb-2">
-          <Badge variant={categoryVariants[item.category]}>
-            {item.category}
-          </Badge>
-          <CardTitle className="mt-2 text-lg font-semibold line-clamp-2">
-            {item.title}
-          </CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-grow p-4 pt-0">
-        <p className="text-sm text-muted-foreground line-clamp-3">
-          {item.description}
-        </p>
-      </CardContent>
-      <CardFooter className="flex-col items-start p-4 pt-0 gap-2">
-        {itemOwner?.name && (
-            <div className="flex items-center text-sm text-muted-foreground gap-2">
-                <User className="h-4 w-4" />
-                <span>{itemOwner.name}</span>
-            </div>
-        )}
-        {itemOwner?.contactNumber && (
-            <div className="flex items-center text-sm text-muted-foreground gap-2">
-                <Phone className="h-4 w-4" />
-                <span>{itemOwner.contactNumber}</span>
-            </div>
-        )}
-        <div className="w-full flex gap-2 pt-2">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button className="w-full" disabled={user?.id === item.userId}>
-                  Claim / Request
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Confirm Request</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to send a request for &quot;{item.title}&quot;? 
-                    The owner will be notified of your interest.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleClaimRequest}>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+              </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl p-2">
+              <DialogTitle className="sr-only">{item.title}</DialogTitle>
+              <div className="relative w-full h-[80vh]">
+                  <Image 
+                      src={item.imageUrl}
+                      alt={item.title}
+                      fill
+                      sizes="100vw"
+                      className="object-contain"
+                  />
+              </div>
+            </DialogContent>
+          </Dialog>
+          <div className="p-4 pb-2">
+            <Badge variant={categoryVariants[item.category]}>
+              {item.category}
+            </Badge>
+            <CardTitle className="mt-2 text-lg font-semibold line-clamp-2">
+              {item.title}
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="flex-grow p-4 pt-0">
+          <p className="text-sm text-muted-foreground line-clamp-3">
+            {item.description}
+          </p>
+        </CardContent>
+        <CardFooter className="flex-col items-start p-4 pt-0 gap-2">
+          {itemOwner?.name && (
+              <div className="flex items-center text-sm text-muted-foreground gap-2">
+                  <UserIcon className="h-4 w-4" />
+                  <span>{itemOwner.name}</span>
+              </div>
+          )}
+          <div className="w-full flex gap-2 pt-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button className="w-full" disabled={user?.id === item.userId}>
+                    Claim / Request
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Request</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to send a request for &quot;{item.title}&quot;? 
+                      The owner will be notified of your interest. After confirming, you will see their contact details.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleClaimRequest}>Continue</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
-            {canDelete && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon" title="Delete Item">
-                        <Trash2 />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the
-                        post &quot;{item.title}&quot;.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+              {canDelete && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="icon" title="Delete Item">
+                          <Trash2 />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the
+                          post &quot;{item.title}&quot;.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+              )}
+          </div>
+        </CardFooter>
+      </Card>
+      
+      <Dialog open={isOwnerInfoOpen} onOpenChange={setIsOwnerInfoOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Contact the Owner</DialogTitle>
+                <DialogDescription>
+                    Your request has been sent. You can now contact the owner to arrange the exchange for &quot;{item.title}&quot;.
+                </DialogDescription>
+            </DialogHeader>
+            {itemOwner && (
+                <div className="py-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <UserIcon className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Name:</span>
+                      <span>{itemOwner.name}</span>
+                    </div>
+                      <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Contact:</span>
+                      <span>{itemOwner.contactNumber || "Not provided"}</span>
+                    </div>
+                </div>
             )}
-        </div>
-      </CardFooter>
-    </Card>
+            <DialogClose asChild>
+              <Button type="button" className="w-full">
+                  Close
+              </Button>
+            </DialogClose>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
