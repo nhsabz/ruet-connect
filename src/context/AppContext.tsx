@@ -5,7 +5,7 @@ import { createContext, useState, useEffect, type ReactNode } from "react";
 import type { User, Item, ClaimRequest, NewItem } from "@/lib/types";
 import { mockItems, mockRequests, mockUserProfiles } from "@/lib/mockData";
 import { useRouter } from "next/navigation";
-import { storage, auth } from "@/lib/firebase";
+import { storage, auth, db } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
   onAuthStateChanged, 
@@ -15,8 +15,11 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   deleteUser,
+  GoogleAuthProvider,
+  signInWithPopup,
   type User as FirebaseUser
 } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"; 
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_EMAILS } from "@/lib/config";
 
@@ -29,6 +32,7 @@ interface AppContextType {
   isAdmin: boolean;
   firebaseUser: FirebaseUser | null;
   login: (email: string, password?: string) => Promise<boolean>;
+  signInWithGoogle: () => Promise<void>;
   logout: () => void;
   signup: (name: string, email: string, password: string, contactNumber: string) => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<void>;
@@ -45,8 +49,7 @@ interface AppContextType {
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// In a real app, you'd fetch this from a database
-let userProfiles: {[key: string]: {name: string, email: string, contactNumber: string}} = mockUserProfiles;
+let userProfiles: {[key: string]: {name: string, email: string, contactNumber: string, role: "student" | "teacher"}} = mockUserProfiles;
 
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -59,19 +62,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { toast } = useToast();
 
+  const handleUserSignIn = async (fbUser: FirebaseUser) => {
+    if (!fbUser.email) return;
+
+    const userRef = doc(db, "users", fbUser.uid);
+    const userDoc = await getDoc(userRef);
+    let appUser: User;
+
+    if (userDoc.exists()) {
+      appUser = userDoc.data() as User;
+    } else {
+      // This path is for users created via Google Sign-In
+      const email = fbUser.email;
+      const role = email.endsWith('student.ruet.ac.bd') ? 'student' : 'teacher';
+      const studentId = getUserId(email);
+      
+      appUser = {
+        id: studentId,
+        uid: fbUser.uid,
+        name: fbUser.displayName || 'RUET User',
+        email: email,
+        role: role,
+        contactNumber: fbUser.phoneNumber || ''
+      };
+      
+      await setDoc(userRef, {
+        ...appUser,
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    setUser(appUser);
+    setIsAdmin(ADMIN_EMAILS.includes(fbUser.email));
+    toast({ title: "Login Successful", description: `Welcome back, ${appUser.name}!` });
+    router.push("/");
+  };
+  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setFirebaseUser(currentUser);
-      if (currentUser && currentUser.emailVerified && currentUser.email) {
-        const studentId = getUserId(currentUser.email);
-        const profile = userProfiles[studentId];
-        setUser({ 
-            id: studentId, 
-            name: profile?.name,
-            email: currentUser.email,
-            contactNumber: profile?.contactNumber
-        });
-        setIsAdmin(ADMIN_EMAILS.includes(currentUser.email));
+      if (currentUser) {
+        handleUserSignIn(currentUser);
       } else {
         setUser(null);
         setIsAdmin(false);
@@ -85,14 +116,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (ADMIN_EMAILS.includes(email)) {
         return email.split('@')[0];
     }
-    // Handle demo user
     const demoProfile = Object.values(userProfiles).find(p => p.email === email);
     if (demoProfile) {
         const id = Object.keys(userProfiles).find(key => userProfiles[key] === demoProfile);
         if (id) return id;
     }
-
-    // Generic email handling
     return email.split('@')[0];
   }
 
@@ -104,13 +132,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
         name: profile.name,
         email: profile.email,
         contactNumber: profile.contactNumber,
+        role: profile.role,
       };
     }
-    // Fallback for users that might exist in auth but not in mock profiles
     if(user && getUserId(user.email) === userId) {
         return user;
     }
     return undefined;
+  };
+  
+  const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+        prompt: 'select_account'
+    });
+    try {
+        const result = await signInWithPopup(auth, provider);
+        const email = result.user.email;
+
+        if (!email || !email.endsWith('.ruet.ac.bd')) {
+            await firebaseSignOut(auth);
+            toast({
+                title: "Sign-In Failed",
+                description: "Access is restricted to RUET email domains only.",
+                variant: "destructive"
+            });
+            return;
+        }
+        
+        await handleUserSignIn(result.user);
+
+    } catch (error: any) {
+        console.error("Google Sign-In Error: ", error);
+        toast({
+            title: "Sign-In Error",
+            description: "An error occurred during Google Sign-In. Please try again.",
+            variant: "destructive"
+        })
+    }
   };
 
   const login = async (email: string, password?: string): Promise<boolean> => {
@@ -119,7 +178,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return false;
     }
 
-    // Handle Demo Account Login
     if (email === DEMO_STUDENT_ID && password === DEMO_PASSWORD) {
         const demoUserEmail = userProfiles[DEMO_STUDENT_ID]?.email;
         if (!demoUserEmail) {
@@ -128,22 +186,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         try {
             await signInWithEmailAndPassword(auth, demoUserEmail, DEMO_PASSWORD);
-             toast({ title: "Login Successful", description: "Welcome back, Demo User!" });
-             router.push("/");
-             return true;
+            return true;
         } catch (error: any) {
-             // If demo user doesn't exist in Firebase Auth, create it.
             if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
                  try {
                     const userCredential = await createUserWithEmailAndPassword(auth, demoUserEmail, DEMO_PASSWORD);
-                    // Manually "verify" email for demo user for simplicity
-                    await sendEmailVerification(userCredential.user); 
-                    // This is a mock verification for the demo user. In a real scenario, you wouldn't do this.
-                     userCredential.user.emailVerified = true; 
-                    toast({ title: "Demo Account Created", description: "Logging you in..." });
-                    await signInWithEmailAndPassword(auth, demoUserEmail, DEMO_PASSWORD);
-                    router.push("/");
-                    return true;
+                    await sendEmailVerification(userCredential.user);
+                    toast({ title: "Demo Account Created", description: "Please verify your email before logging in." });
+                    await firebaseSignOut(auth);
+                    return false;
                  } catch (signupError: any) {
                     toast({ title: "Demo Setup Failed", description: signupError.message, variant: "destructive" });
                     return false;
@@ -154,8 +205,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
     }
 
-
-    // Standard Login
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
        if (!userCredential.user.emailVerified) {
@@ -168,8 +217,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await firebaseSignOut(auth);
         return false;
       }
-      toast({ title: "Login Successful", description: "Welcome back!" });
-      router.push("/");
       return true;
     } catch (error: any) {
       toast({ title: "Login Failed", description: "Invalid email or password.", variant: "destructive" });
@@ -179,9 +226,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     firebaseSignOut(auth).then(() => {
-        setUser(null);
-        setFirebaseUser(null);
-        setIsAdmin(false);
         router.push("/login");
         toast({ title: "Logged Out", description: "You have been successfully logged out." });
     })
@@ -191,11 +235,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      const userId = getUserId(email);
-      userProfiles[userId] = { name, email, contactNumber };
+      const userRef = doc(db, "users", userCredential.user.uid);
+      const studentId = getUserId(email);
+      const newUser: User = {
+        id: studentId,
+        uid: userCredential.user.uid,
+        name,
+        email,
+        contactNumber,
+        role: email.endsWith('student.ruet.ac.bd') ? 'student' : 'teacher'
+      }
+
+      await setDoc(userRef, {
+        ...newUser,
+        createdAt: serverTimestamp(),
+      });
 
       await sendEmailVerification(userCredential.user);
-      
       await firebaseSignOut(auth);
       
       toast({
@@ -248,7 +304,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             imageUrl = await getDownloadURL(snapshot.ref);
         } catch (error) {
             console.error("Firebase Storage Error:", error);
-            // Re-throw the error to be caught by the calling component
             throw error;
         }
     }
@@ -326,17 +381,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const updateContactNumber = async (newNumber: string) => {
-    if (user) {
-        // Update in-memory user profiles
-        const userId = getUserId(user.email);
-        if (userProfiles[userId]) {
-            userProfiles[userId].contactNumber = newNumber;
-        } else {
-            userProfiles[userId] = { name: user.name || '', email: user.email, contactNumber: newNumber };
+    if (user && user.uid) {
+        const userRef = doc(db, "users", user.uid);
+        try {
+          await setDoc(userRef, { contactNumber: newNumber }, { merge: true });
+          setUser(prevUser => prevUser ? { ...prevUser, contactNumber: newNumber } : null);
+          toast({ title: "Success", description: "Contact number updated." });
+        } catch (error) {
+          console.error("Update contact error: ", error);
+          toast({ title: "Error", description: "Failed to update contact number.", variant: "destructive" });
         }
-        
-        // Update user state
-        setUser(prevUser => prevUser ? { ...prevUser, contactNumber: newNumber } : null);
     }
   };
 
@@ -346,7 +400,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ).length
     : 0;
 
-  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, createRequest, pendingRequestCount, updateContactNumber, getUserById };
+  const value = { user, isAdmin, firebaseUser, login, signInWithGoogle, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, createRequest, pendingRequestCount, updateContactNumber, getUserById };
 
   if (!isLoaded) {
     return null; // or a loading spinner

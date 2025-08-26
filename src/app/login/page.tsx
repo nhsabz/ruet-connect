@@ -20,7 +20,8 @@ import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
+import { Terminal, Chrome } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
   email: z.string().min(1, "Student ID or Email is required."),
@@ -28,7 +29,7 @@ const formSchema = z.object({
 });
 
 export default function LoginPage() {
-  const { login, sendPasswordReset } = useAppContext();
+  const { login, sendPasswordReset, signInWithGoogle } = useAppContext();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,10 +54,15 @@ export default function LoginPage() {
     await login(values.email, values.password);
     setIsSubmitting(false);
   }
+  
+  const handleGoogleSignIn = async () => {
+    setIsSubmitting(true);
+    await signInWithGoogle();
+    setIsSubmitting(false);
+  }
 
   const handlePasswordReset = async () => {
     const email = form.getValues("email");
-    // A simple check if it looks like an email before sending.
     if (!email.includes('@')) {
         form.setError("email", { type: "manual", message: "Please enter a valid email address to reset password." });
         return;
@@ -89,8 +95,24 @@ export default function LoginPage() {
               </AlertDescription>
             </Alert>
           )}
+          <div className="space-y-4">
+             <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+               <Chrome className="mr-2 h-4 w-4" />
+               Sign in with Google
+             </Button>
+            <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                    Or continue with
+                    </span>
+                </div>
+            </div>
+          </div>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
               <FormField
                 control={form.control}
                 name="email"
