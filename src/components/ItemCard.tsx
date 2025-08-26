@@ -109,9 +109,27 @@ export function ItemCard({ item }: ItemCardProps) {
             </div>
         )}
         <div className="w-full flex gap-2 pt-2">
-            <Button className="w-full" onClick={handleClaimRequest} disabled={user?.id === item.userId}>
-            Claim / Request
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button className="w-full" disabled={user?.id === item.userId}>
+                  Claim / Request
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm Request</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to send a request for &quot;{item.title}&quot;? 
+                    The owner will be notified of your interest.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClaimRequest}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
             {canDelete && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
