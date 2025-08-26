@@ -24,6 +24,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 
@@ -91,6 +92,7 @@ export function ItemCard({ item }: ItemCardProps) {
             </div>
           </DialogTrigger>
           <DialogContent className="max-w-3xl p-2">
+             <DialogTitle className="sr-only">{item.title}</DialogTitle>
              <div className="relative w-full h-[80vh]">
                 <Image 
                     src={item.imageUrl}
