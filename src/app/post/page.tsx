@@ -25,9 +25,10 @@ import type { Category } from "@/lib/types";
 import Image from "next/image";
 import { UploadCloud } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
 
 // Cloudinary settings
-const CLOUDINARY_CLOUD_NAME = "dxlms92vi"; 
+const CLOUDINARY_CLOUD_NAME = "dnsnjef8h"; 
 const CLOUDINARY_UPLOAD_PRESET = "ruet-connect";
 
 const formSchema = z.object({
@@ -85,11 +86,7 @@ export default function PostPage() {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-        // Add other unsigned upload options if needed, based on your preset settings
-        // formData.append("overwrite", "false"); 
-        // formData.append("use_filename", "false");
-        // formData.append("unique_filename", "false");
-
+        
         const xhr = new XMLHttpRequest();
         xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, true);
         
@@ -133,7 +130,7 @@ export default function PostPage() {
         await addItem({
             title: values.title,
             description: values.description,
-            category: values.category,
+            category: values.category as Category,
             imageUrl: imageUrl,
         });
 
