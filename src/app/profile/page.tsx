@@ -13,6 +13,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Phone, Edit, Save, X, AlertTriangle, User as UserIcon } from "lucide-react";
+import type { ClaimRequest, User } from "@/lib/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,13 +36,15 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function ProfilePage() {
-  const { user, items, requests, updateContactNumber, deleteAccount } = useAppContext();
+  const { user, items, requests, updateContactNumber, deleteAccount, updateRequestStatus, getUserById } = useAppContext();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [newContactNumber, setNewContactNumber] = useState(user?.contactNumber || "");
   const [activeTab, setActiveTab] = useState("my-posts");
+  const [selectedRequester, setSelectedRequester] = useState<User | null>(null);
+  const [isContactInfoDialogOpen, setIsContactInfoDialogOpen] = useState(false);
   
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -67,6 +79,21 @@ export default function ProfilePage() {
 
   const handleDeleteAccount = async () => {
     await deleteAccount();
+  }
+
+  const handleApproveRequest = (request: ClaimRequest) => {
+    const requester = getUserById(request.requesterId);
+    if(requester) {
+        setSelectedRequester(requester);
+        updateRequestStatus(request.id, 'Approved');
+        setIsContactInfoDialogOpen(true);
+    } else {
+        toast({ title: "Error", description: "Could not find requester details.", variant: "destructive"})
+    }
+  }
+
+  const handleRejectRequest = (request: ClaimRequest) => {
+    updateRequestStatus(request.id, 'Rejected');
   }
 
   if (!user) {
@@ -180,8 +207,8 @@ export default function ProfilePage() {
                         </Badge>
                         {req.status === 'Pending' && (
                             <>
-                               <Button size="sm">Approve</Button>
-                               <Button size="sm" variant="destructive">Reject</Button>
+                               <Button size="sm" onClick={() => handleApproveRequest(req)}>Approve</Button>
+                               <Button size="sm" variant="destructive" onClick={() => handleRejectRequest(req)}>Reject</Button>
                             </>
                         )}
                     </div>
@@ -196,6 +223,36 @@ export default function ProfilePage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isContactInfoDialogOpen} onOpenChange={setIsContactInfoDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Request Approved!</DialogTitle>
+                  <DialogDescription>
+                      You can now contact the requester to arrange the exchange.
+                  </DialogDescription>
+              </DialogHeader>
+              {selectedRequester && (
+                  <div className="py-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Name:</span>
+                        <span>{selectedRequester.name}</span>
+                      </div>
+                       <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Contact:</span>
+                        <span>{selectedRequester.contactNumber || "Not provided"}</span>
+                      </div>
+                  </div>
+              )}
+              <DialogClose asChild>
+                <Button type="button" className="w-full">
+                    Close
+                </Button>
+              </DialogClose>
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }

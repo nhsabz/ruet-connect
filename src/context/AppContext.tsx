@@ -13,7 +13,8 @@ import {
     where, 
     deleteDoc,
     Timestamp,
-    orderBy
+    orderBy,
+    updateDoc
 } from "firebase/firestore";
 import type { User, Item, ClaimRequest, NewItem, Role } from "@/lib/types";
 import { mockRequests, mockUserProfiles } from "@/lib/mockData";
@@ -53,6 +54,7 @@ interface AppContextType {
   deleteAccount: () => Promise<void>;
   requests: ClaimRequest[];
   createRequest: (item: Item) => void;
+  updateRequestStatus: (requestId: string, status: 'Approved' | 'Rejected') => Promise<void>;
   pendingRequestCount: number;
   updateContactNumber: (newNumber: string) => Promise<void>;
   getUserById: (userId: string) => User | undefined;
@@ -68,18 +70,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [items, setItems] = useState<Item[]>([]);
-  const [requests, setRequests] = useState<ClaimRequest[]>(mockRequests);
+  const [requests, setRequests] = useState<ClaimRequest[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchItems = async () => {
+    const fetchItemsAndRequests = async () => {
         try {
+            // Fetch Items
             const itemsCollection = collection(db, "items");
-            const q = query(itemsCollection, orderBy("createdAt", "desc"));
-            const querySnapshot = await getDocs(q);
-            const itemsData = querySnapshot.docs.map(doc => {
+            const itemsQuery = query(itemsCollection, orderBy("createdAt", "desc"));
+            const itemsSnapshot = await getDocs(itemsQuery);
+            const itemsData = itemsSnapshot.docs.map(doc => {
                 const data = doc.data();
                 return {
                     id: doc.id,
@@ -88,17 +91,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 } as Item;
             });
             setItems(itemsData);
+
+            // Fetch Requests
+            const requestsCollection = collection(db, "requests");
+            const requestsQuery = query(requestsCollection, orderBy("createdAt", "desc"));
+            const requestsSnapshot = await getDocs(requestsQuery);
+            const requestsData = requestsSnapshot.docs.map(doc => {
+                 const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    createdAt: (data.createdAt as Timestamp).toDate(),
+                } as ClaimRequest;
+            });
+            setRequests(requestsData);
+
         } catch (error) {
-            console.error("Error fetching items: ", error);
+            console.error("Error fetching data: ", error);
             toast({
                 title: "Error",
-                description: "Could not fetch items from the database.",
+                description: "Could not fetch data from the database.",
                 variant: "destructive"
             });
         }
     };
 
-    fetchItems();
+    fetchItemsAndRequests();
   }, [toast]);
 
   const handleUserSignIn = (fbUser: FirebaseUser) => {
@@ -312,8 +330,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast({ title: "Permission Denied", description: "You are not authorized to delete this item.", variant: "destructive"});
         return;
     }
-    setItems(prevItems => prevItems.filter(item => item.id !== itemId));
-    toast({ title: "Item Deleted", description: "The item has been successfully removed."});
+    
+    try {
+      await deleteDoc(doc(db, "items", itemId));
+      setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+      toast({ title: "Item Deleted", description: "The item has been successfully removed."});
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      toast({ title: "Error", description: "Failed to delete item.", variant: "destructive" });
+    }
   }
 
   const deleteAccount = async () => {
@@ -345,26 +370,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  const createRequest = (item: Item) => {
+  const createRequest = async (item: Item) => {
     if (!user) return;
 
-    const newRequest: ClaimRequest = {
-        id: `req${requests.length + 1}`,
+    const newRequestData = {
         itemId: item.id,
         itemTitle: item.title,
         requesterId: user.id,
         ownerId: item.userId,
-        status: 'Pending',
-        createdAt: new Date(),
+        status: 'Pending' as 'Pending' | 'Approved' | 'Rejected',
+        createdAt: Timestamp.now(),
     };
     
-    setRequests(prev => [newRequest, ...prev]);
-
-    toast({
-      title: "Request Sent!",
-      description: `Your request for "${item.title}" has been sent to the owner.`,
-    });
+    try {
+      const docRef = await addDoc(collection(db, "requests"), newRequestData);
+      const newRequest: ClaimRequest = {
+        id: docRef.id,
+        ...newRequestData,
+        createdAt: newRequestData.createdAt.toDate(),
+      }
+      setRequests(prev => [newRequest, ...prev]);
+      toast({
+        title: "Request Sent!",
+        description: `Your request for "${item.title}" has been sent to the owner.`,
+      });
+    } catch (error) {
+       console.error("Error creating request:", error);
+       toast({ title: "Error", description: "Failed to create request.", variant: "destructive" });
+    }
   }
+
+  const updateRequestStatus = async (requestId: string, status: 'Approved' | 'Rejected') => {
+    try {
+        const requestDocRef = doc(db, "requests", requestId);
+        await updateDoc(requestDocRef, { status });
+        
+        setRequests(prevRequests => 
+            prevRequests.map(req => 
+                req.id === requestId ? { ...req, status } : req
+            )
+        );
+
+        toast({
+            title: "Request Updated",
+            description: `The request has been ${status.toLowerCase()}.`
+        });
+    } catch (error) {
+        console.error("Error updating request status: ", error);
+        toast({
+            title: "Update Failed",
+            description: "Could not update the request status.",
+            variant: "destructive"
+        });
+    }
+  };
 
   const updateContactNumber = async (newNumber: string) => {
     if (user) {
@@ -384,7 +443,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ).length
     : 0;
 
-  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, createRequest, pendingRequestCount, updateContactNumber, getUserById };
+  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, createRequest, updateRequestStatus, pendingRequestCount, updateContactNumber, getUserById };
 
   if (!isLoaded) {
     return null; // or a loading spinner
@@ -392,5 +451,3 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
-
-    
