@@ -55,12 +55,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!user) {
-      toast({
-        title: "Unauthorized",
-        description: "You must be logged in to view your profile.",
-        variant: "destructive",
-      });
-      router.replace("/login");
+      // router.replace("/login") is handled by the AppContext now
     } else {
         setNewContactNumber(user.contactNumber || "");
     }
@@ -69,10 +64,6 @@ export default function ProfilePage() {
   const handleContactSave = async () => {
     if (user) {
         await updateContactNumber(newContactNumber);
-        toast({
-            title: "Contact Updated",
-            description: "Your contact number has been successfully updated."
-        });
         setIsEditingContact(false);
     }
   }
@@ -88,7 +79,7 @@ export default function ProfilePage() {
         updateRequestStatus(request.id, 'Approved');
         setIsContactInfoDialogOpen(true);
     } else {
-        toast({ title: "Error", description: "Could not find requester details.", variant: "destructive"})
+        toast({ title: "Error", description: "Could not find requester details. They may have deleted their account.", variant: "destructive"})
     }
   }
 
@@ -108,11 +99,11 @@ export default function ProfilePage() {
       <Card>
         <CardHeader className="flex flex-row items-center gap-4">
           <Avatar className="h-20 w-20">
-            <AvatarFallback className="text-3xl">{user.name ? user.name.charAt(0) : user.id.substring(0, 2)}</AvatarFallback>
+            <AvatarFallback className="text-3xl">{user.name ? user.name.charAt(0) : 'U'}</AvatarFallback>
           </Avatar>
           <div>
             <CardTitle className="text-3xl font-headline">{user.name || 'My Profile'}</CardTitle>
-            <CardDescription className="text-lg">Student ID: {user.id}</CardDescription>
+            <CardDescription className="text-lg">Student ID: {user.studentId}</CardDescription>
             <CardDescription className="text-md text-muted-foreground">{user.email}</CardDescription>
             <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                 <Phone className="h-4 w-4" />
@@ -188,33 +179,36 @@ export default function ProfilePage() {
         <TabsContent value="my-requests" className="mt-6">
           <div className="space-y-4">
             {myRequests.length > 0 ? (
-              myRequests.map((req) => (
-                <Card key={req.id}>
-                  <CardContent className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                      <p>
-                        Request for{" "}
-                        <span className="font-semibold">{req.itemTitle}</span> from Student ID{" "}
-                        <span className="font-semibold">{req.requesterId}</span>
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(req.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <Badge variant={req.status === 'Pending' ? 'secondary' : req.status === 'Approved' ? 'default' : 'destructive'}>
-                            {req.status}
-                        </Badge>
-                        {req.status === 'Pending' && (
-                            <>
-                               <Button size="sm" onClick={() => handleApproveRequest(req)}>Approve</Button>
-                               <Button size="sm" variant="destructive" onClick={() => handleRejectRequest(req)}>Reject</Button>
-                            </>
-                        )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+              myRequests.map((req) => {
+                const requester = getUserById(req.requesterId);
+                return (
+                    <Card key={req.id}>
+                    <CardContent className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                        <p>
+                            Request for{" "}
+                            <span className="font-semibold">{req.itemTitle}</span> from Student ID{" "}
+                            <span className="font-semibold">{requester?.studentId || 'Unknown'}</span>
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            {new Date(req.createdAt).toLocaleString()}
+                        </p>
+                        </div>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <Badge variant={req.status === 'Pending' ? 'secondary' : req.status === 'Approved' ? 'default' : 'destructive'}>
+                                {req.status}
+                            </Badge>
+                            {req.status === 'Pending' && (
+                                <>
+                                <Button size="sm" onClick={() => handleApproveRequest(req)}>Approve</Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleRejectRequest(req)}>Reject</Button>
+                                </>
+                            )}
+                        </div>
+                    </CardContent>
+                    </Card>
+                )
+            })
             ) : (
               <p className="col-span-full text-center text-muted-foreground py-10">
                 You have not received any requests.
@@ -256,3 +250,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

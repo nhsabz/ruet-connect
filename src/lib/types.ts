@@ -9,7 +9,7 @@ export interface Item {
   category: Category;
   imageUrl: string;
   'data-ai-hint'?: string;
-  userId: string; // Corresponds to User['id']
+  userId: string; // Corresponds to User['id'], which is Firebase Auth UID
   createdAt: Date;
 }
 
@@ -21,7 +21,8 @@ export interface NewItem {
 }
 
 export interface User {
-  id: string; // Student ID
+  id: string; // Firebase Auth UID
+  studentId: string;
   name?: string;
   email: string;
   contactNumber?: string;
@@ -32,8 +33,10 @@ export interface ClaimRequest {
   id: string;
   itemId: string;
   itemTitle: string;
-  requesterId: string;
-  ownerId: string;
+  requesterId: string; // Firebase Auth UID
+  ownerId: string; // Firebase Auth UID
   status: 'Pending' | 'Approved' | 'Rejected';
   createdAt: Date;
 }
+
+    
