@@ -122,12 +122,20 @@ export function ItemCard({ item }: ItemCardProps) {
         </p>
       </CardContent>
       <CardFooter className="flex-col items-start p-4 pt-0 gap-2">
-        {itemOwner?.name && (
-            <div className="flex items-center text-sm text-muted-foreground gap-2">
-                <UserIcon className="h-4 w-4" />
-                <span>Posted by: {itemOwner.name}</span>
-            </div>
-        )}
+        <div className="space-y-1 text-sm text-muted-foreground">
+          {itemOwner?.name && (
+              <div className="flex items-center gap-2">
+                  <UserIcon className="h-4 w-4" />
+                  <span>{itemOwner.name}</span>
+              </div>
+          )}
+           {itemOwner?.contactNumber && (
+              <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  <span>{itemOwner.contactNumber}</span>
+              </div>
+          )}
+        </div>
         <div className="w-full flex gap-2 pt-2">
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -140,7 +148,7 @@ export function ItemCard({ item }: ItemCardProps) {
                   <AlertDialogTitle>Confirm Request</AlertDialogTitle>
                   <AlertDialogDescription>
                     Are you sure you want to send a request for &quot;{item.title}&quot;? 
-                    The owner will be notified of your interest. Their contact details are visible on their profile after approval.
+                    The owner will be notified of your interest.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
