@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { University, LayoutGrid, PlusSquare, List, User as UserIcon, LogIn, LogOut, Bell } from "lucide-react";
+import { University, LayoutGrid, PlusSquare, List, User as UserIcon, LogIn, LogOut, Bell, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/hooks/useAppContext";
 import { usePathname, useRouter } from "next/navigation";
@@ -16,6 +16,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
+import React from "react";
 
 export function Header() {
   const { user, logout, pendingRequestCount } = useAppContext();
@@ -36,14 +43,54 @@ export function Header() {
     router.push('/profile?tab=requests');
   }
 
+  const NavLink = ({ href, children }: { href: string, children: React.ReactNode }) => (
+     <SheetClose asChild>
+        <Link href={href} className={cn(
+            "flex items-center gap-4 px-2.5 py-2 text-muted-foreground hover:text-foreground",
+            pathname === href && "text-foreground bg-accent"
+        )}>
+            {children}
+        </Link>
+     </SheetClose>
+  );
+
   return (
     <header className="bg-card shadow-sm sticky top-0 z-40">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-            <University className="h-6 w-6 text-primary" />
-            <span className="hidden sm:inline font-headline">RUET Connect</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <div className="md:hidden">
+                <Sheet>
+                    <SheetTrigger asChild>
+                        <Button variant="outline" size="icon">
+                            <Menu className="h-5 w-5" />
+                            <span className="sr-only">Open menu</span>
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="w-full max-w-xs p-0">
+                        <div className="flex h-16 items-center border-b px-4">
+                             <Link href="/" className="flex items-center gap-2 font-bold text-lg">
+                                <University className="h-6 w-6 text-primary" />
+                                <span className="font-headline">RUET Connect</span>
+                            </Link>
+                        </div>
+                        <div className="flex flex-col gap-1 p-2">
+                            {navLinks.map((link) => (
+                                <NavLink key={link.href} href={link.href}>
+                                    <link.icon className="h-5 w-5" />
+                                    {link.label}
+                                </NavLink>
+                            ))}
+                        </div>
+                    </SheetContent>
+                </Sheet>
+            </div>
+            <Link href="/" className="hidden md:flex items-center gap-2 font-bold text-lg">
+                <University className="h-6 w-6 text-primary" />
+                <span className="font-headline">RUET Connect</span>
+            </Link>
+          </div>
+          
 
           <nav className="hidden md:flex items-center space-x-2 lg:space-x-4">
             {navLinks.map((link) => (

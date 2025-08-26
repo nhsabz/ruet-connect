@@ -19,13 +19,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Category } from "@/lib/types";
 import Image from "next/image";
-import { UploadCloud } from "lucide-react";
+import { UploadCloud, Camera, FlipHorizontal, Check, RefreshCw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 // Cloudinary settings
 const CLOUDINARY_CLOUD_NAME = "dnsnjef8h"; 
@@ -51,6 +52,13 @@ export default function PostPage() {
   const [statusMessage, setStatusMessage] = useState('Post Item');
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  // Camera state
+  const [view, setView] = useState<'upload' | 'camera'>('upload');
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+
   useEffect(() => {
     if (!user) {
       toast({
@@ -62,6 +70,38 @@ export default function PostPage() {
     }
   }, [user, router, toast]);
 
+  useEffect(() => {
+    const getCameraPermission = async () => {
+        if (view !== 'camera' || hasCameraPermission) return;
+        
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({video: { facingMode: 'environment' }});
+            setHasCameraPermission(true);
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+            }
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+            setHasCameraPermission(false);
+            toast({
+                variant: 'destructive',
+                title: 'Camera Access Denied',
+                description: 'Please enable camera permissions in your browser settings.',
+            });
+            setView('upload');
+        }
+    };
+    getCameraPermission();
+
+    return () => {
+        // Cleanup: stop video stream when component unmounts or view changes
+        if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+        }
+    }
+  }, [view, hasCameraPermission, toast]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -69,6 +109,15 @@ export default function PostPage() {
       description: "",
     },
   });
+
+  const handleFileAndSetPreview = (file: File) => {
+    form.setValue("image", file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
@@ -133,12 +182,7 @@ export default function PostPage() {
     if (file) {
       try {
         const compressedFile = await compressImage(file);
-        form.setValue("image", compressedFile);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreview(reader.result as string);
-        };
-        reader.readAsDataURL(compressedFile);
+        handleFileAndSetPreview(compressedFile);
       } catch (error) {
         console.error("Image compression failed:", error);
         toast({
@@ -147,6 +191,29 @@ export default function PostPage() {
           variant: "destructive"
         })
       }
+    }
+  };
+
+  const snapPhoto = async () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        toast({ title: "Error", description: "Could not capture image.", variant: "destructive" });
+        return;
+      }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          const compressedFile = await compressImage(file);
+          handleFileAndSetPreview(compressedFile);
+          setView('upload');
+        }
+      }, 'image/jpeg');
     }
   };
 
@@ -230,7 +297,7 @@ export default function PostPage() {
   }
 
   return (
-    <div className="flex justify-center py-12">
+    <div className="flex justify-center py-6 sm:py-12">
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">Post a New Item</CardTitle>
@@ -301,22 +368,53 @@ export default function PostPage() {
                 render={() => (
                   <FormItem>
                     <FormLabel>Item Image</FormLabel>
-                    <FormControl>
-                      <div className="w-full">
-                        <label htmlFor="file-upload" className="relative cursor-pointer rounded-lg border-2 border-dashed border-muted-foreground/50 w-full h-64 flex flex-col items-center justify-center text-center p-4 hover:border-primary transition-colors">
-                          {preview ? (
-                            <Image src={preview} alt="Image preview" fill className="object-contain rounded-md" />
-                          ) : (
-                            <div className="space-y-2 text-muted-foreground">
-                              <UploadCloud className="mx-auto h-12 w-12" />
-                              <p className="font-semibold">Click to upload an image</p>
-                              <p className="text-xs">PNG, JPG up to 10MB</p>
-                            </div>
-                          )}
-                        </label>
-                        <Input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/png, image/jpeg" disabled={isSubmitting} />
-                      </div>
-                    </FormControl>
+                    {view === 'upload' && (
+                      <FormControl>
+                        <div className="w-full">
+                          <label htmlFor="file-upload" className="relative cursor-pointer rounded-lg border-2 border-dashed border-muted-foreground/50 w-full aspect-video flex flex-col items-center justify-center text-center p-4 hover:border-primary transition-colors">
+                            {preview ? (
+                              <Image src={preview} alt="Image preview" fill className="object-contain rounded-md" />
+                            ) : (
+                              <div className="space-y-2 text-muted-foreground">
+                                <UploadCloud className="mx-auto h-12 w-12" />
+                                <p className="font-semibold">Click to upload an image</p>
+                                <p className="text-xs">PNG, JPG, or use Camera</p>
+                              </div>
+                            )}
+                          </label>
+                          <Input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/png, image/jpeg" disabled={isSubmitting} />
+                        </div>
+                        <Button type="button" variant="outline" className="w-full mt-2" onClick={() => setView('camera')}>
+                            <Camera className="mr-2"/> Use Camera
+                        </Button>
+                      </FormControl>
+                    )}
+                    {view === 'camera' && (
+                        <div className="space-y-2">
+                             <div className="w-full aspect-video bg-black rounded-md overflow-hidden relative">
+                                <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                                {hasCameraPermission === false && (
+                                    <div className="absolute inset-0 flex items-center justify-center p-4">
+                                        <Alert variant="destructive">
+                                            <AlertTitle>Camera Access Required</AlertTitle>
+                                            <AlertDescription>
+                                                Please allow camera access in your browser settings to use this feature.
+                                            </AlertDescription>
+                                        </Alert>
+                                    </div>
+                                )}
+                             </div>
+                             <div className="flex gap-2">
+                                <Button type="button" className="w-full" onClick={snapPhoto} disabled={!hasCameraPermission}>
+                                    <Camera className="mr-2"/> Snap Photo
+                                </Button>
+                                <Button type="button" variant="outline" onClick={() => setView('upload')}>
+                                    Cancel
+                                </Button>
+                             </div>
+                        </div>
+                    )}
+                    <canvas ref={canvasRef} className="hidden"></canvas>
                     <FormMessage />
                   </FormItem>
                 )}
