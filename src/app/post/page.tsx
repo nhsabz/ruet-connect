@@ -48,6 +48,7 @@ export default function PostPage() {
   const { toast } = useToast();
   const [preview, setPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('Post Item');
   const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
@@ -123,10 +124,11 @@ export default function PostPage() {
         let imageUrl = 'https://placehold.co/600x400.png'; // Default placeholder
 
         if (values.image) {
+            setStatusMessage('Uploading...');
             imageUrl = await uploadToCloudinary(values.image);
         }
 
-        // Now add the item with the final imageUrl
+        setStatusMessage('Saving...');
         await addItem({
             title: values.title,
             description: values.description,
@@ -150,6 +152,7 @@ export default function PostPage() {
     } finally {
         setIsSubmitting(false);
         setUploadProgress(0);
+        setStatusMessage('Post Item');
     }
   }
   
@@ -259,7 +262,7 @@ export default function PostPage() {
               )}
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? (form.getValues("image") ? 'Uploading...' : 'Posting...') : 'Post Item'}
+                {isSubmitting ? statusMessage : 'Post Item'}
               </Button>
             </form>
           </Form>
