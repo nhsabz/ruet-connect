@@ -14,7 +14,8 @@ import {
     deleteDoc,
     Timestamp,
     orderBy,
-    updateDoc
+    updateDoc,
+    serverTimestamp
 } from "firebase/firestore";
 import type { User, Item, ClaimRequest, NewItem } from "@/lib/types";
 import { useRouter } from "next/navigation";
@@ -151,7 +152,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setFirebaseUser(currentUser);
       if (currentUser) {
-        handleUserSignIn(currentUser);
+        if (!user) { // Only run if user is not already set
+            handleUserSignIn(currentUser);
+        }
       } else {
         setUser(null);
         setIsAdmin(false);
@@ -163,7 +166,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setIsLoaded(true);
     });
     return () => unsubscribe();
-  }, [handleUserSignIn]);
+  }, [handleUserSignIn, user]);
   
   const getUserById = (userId: string): User | undefined => {
      return allUsers.find(u => u.id === userId);
@@ -192,13 +195,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await firebaseSignOut(auth);
         return false;
       }
+      // handleUserSignIn is now called by the onAuthStateChanged listener
       return true;
     } catch (error: any) {
         if ((error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') && email === DEMO_USER_EMAIL) {
             // First time login for demo user
             try {
                 const cred = await createUserWithEmailAndPassword(auth, DEMO_USER_EMAIL, DEMO_PASSWORD);
-                await handleUserSignIn(cred.user);
+                // handleUserSignIn will be triggered by onAuthStateChanged
                 return true;
             } catch (signupError: any) {
                 toast({ title: "Demo Account Creation Failed", description: signupError.message, variant: "destructive" });
@@ -278,13 +282,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const newItemData = {
             ...itemData,
             userId: user.id, // The Firebase Auth UID
-            createdAt: Timestamp.now(),
+            createdAt: serverTimestamp(),
         };
         const docRef = await addDoc(collection(db, "items"), newItemData);
+        // Note: The local state will be updated optimistically.
+        // A more robust solution might refetch or use the server timestamp, but this is fine for now.
         const newItem: Item = {
             id: docRef.id,
-            ...newItemData,
-            createdAt: newItemData.createdAt.toDate(),
+            ...itemData,
+            userId: user.id,
+            createdAt: new Date(),
         };
         setItems(prevItems => [newItem, ...prevItems]);
     } catch (error) {
@@ -344,15 +351,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         requesterId: user.id,
         ownerId: item.userId,
         status: 'Pending' as const,
-        createdAt: Timestamp.now(),
+        createdAt: serverTimestamp(),
     };
     
     try {
       const docRef = await addDoc(collection(db, "requests"), newRequestData);
       const newRequest: ClaimRequest = {
         id: docRef.id,
-        ...newRequestData,
-        createdAt: newRequestData.createdAt.toDate(),
+        itemId: item.id,
+        itemTitle: item.title,
+        requesterId: user.id,
+        ownerId: item.userId,
+        status: 'Pending',
+        createdAt: new Date(), // Optimistic update
       }
       setRequests(prev => [newRequest, ...prev]);
       toast({
@@ -360,7 +371,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         description: `Your request for "${item.title}" has been sent to the owner.`,
       });
     } catch (error) {
-       toast({ title: "Error", description: "Failed to create request.", variant: "destructive" });
+       console.error("Failed to create request:", error);
+       toast({ title: "Error", description: "Failed to create request. Check console for details.", variant: "destructive" });
     }
   }
 
@@ -396,6 +408,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             await updateDoc(userDocRef, { contactNumber: newNumber });
             const updatedUser = { ...user, contactNumber: newNumber };
             setUser(updatedUser);
+            setAllUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
             toast({ title: "Success", description: "Contact number updated." });
         } catch(e) {
             toast({ title: "Error", description: "Could not update contact number.", variant: "destructive"});
@@ -411,7 +424,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, createRequest, updateRequestStatus, pendingRequestCount, updateContactNumber, getUserById };
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={value}>{!isLoaded ? null : children}</AppContext.Provider>;
 }
 
     
