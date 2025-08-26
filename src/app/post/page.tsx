@@ -70,15 +70,83 @@ export default function PostPage() {
     },
   });
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        const MIME_TYPE = 'image/jpeg';
+        const QUALITY = 0.8;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new window.Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height = Math.round((height * MAX_WIDTH) / width);
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width = Math.round((width * MAX_HEIGHT) / height);
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    return reject(new Error('Could not get canvas context'));
+                }
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) {
+                            return reject(new Error('Canvas toBlob failed'));
+                        }
+                        const newFile = new File([blob], file.name, {
+                            type: MIME_TYPE,
+                            lastModified: Date.now(),
+                        });
+                        resolve(newFile);
+                    },
+                    MIME_TYPE,
+                    QUALITY
+                );
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      form.setValue("image", file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedFile = await compressImage(file);
+        form.setValue("image", compressedFile);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreview(reader.result as string);
+        };
+        reader.readAsDataURL(compressedFile);
+      } catch (error) {
+        console.error("Image compression failed:", error);
+        toast({
+          title: "Image Error",
+          description: "Could not process the image. Please try a different one.",
+          variant: "destructive"
+        })
+      }
     }
   };
 
@@ -87,7 +155,6 @@ export default function PostPage() {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-        // Add a unique public_id to prevent overwrites and work with your settings
         formData.append("public_id", `ruet-connect/${Date.now()}`);
 
         const xhr = new XMLHttpRequest();
@@ -123,7 +190,7 @@ export default function PostPage() {
     setUploadProgress(0);
 
     try {
-        let imageUrl = 'https://placehold.co/600x400.png'; // Default placeholder
+        let imageUrl = 'https://placehold.co/600x400.png';
 
         if (values.image) {
             setStatusMessage('Uploading...');
@@ -159,7 +226,7 @@ export default function PostPage() {
   }
   
   if (!user) {
-    return null; // or a loading skeleton
+    return null;
   }
 
   return (
@@ -231,7 +298,7 @@ export default function PostPage() {
                <FormField
                 control={form.control}
                 name="image"
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Item Image</FormLabel>
                     <FormControl>
@@ -243,11 +310,11 @@ export default function PostPage() {
                             <div className="space-y-2 text-muted-foreground">
                               <UploadCloud className="mx-auto h-12 w-12" />
                               <p className="font-semibold">Click to upload an image</p>
-                              <p className="text-xs">PNG, JPG, GIF up to 10MB</p>
+                              <p className="text-xs">PNG, JPG up to 10MB</p>
                             </div>
                           )}
                         </label>
-                        <Input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*" disabled={isSubmitting} />
+                        <Input id="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/png, image/jpeg" disabled={isSubmitting} />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -273,5 +340,3 @@ export default function PostPage() {
     </div>
   );
 }
-
-    
