@@ -87,7 +87,9 @@ export default function PostPage() {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-        
+        // Add a unique public_id to prevent overwrites and work with your settings
+        formData.append("public_id", `ruet-connect/${Date.now()}`);
+
         const xhr = new XMLHttpRequest();
         xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, true);
         
@@ -271,3 +273,5 @@ export default function PostPage() {
     </div>
   );
 }
+
+    
