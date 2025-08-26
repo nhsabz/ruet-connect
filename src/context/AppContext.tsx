@@ -16,7 +16,7 @@ import {
     orderBy
 } from "firebase/firestore";
 import type { User, Item, ClaimRequest, NewItem, Role } from "@/lib/types";
-import { mockItems, mockRequests, mockUserProfiles } from "@/lib/mockData";
+import { mockRequests, mockUserProfiles } from "@/lib/mockData";
 import { useRouter } from "next/navigation";
 import { storage, auth, db } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -67,11 +67,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [items, setItems] = useState<Item[]>(mockItems);
+  const [items, setItems] = useState<Item[]>([]);
   const [requests, setRequests] = useState<ClaimRequest[]>(mockRequests);
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchItems = async () => {
+        try {
+            const itemsCollection = collection(db, "items");
+            const q = query(itemsCollection, orderBy("createdAt", "desc"));
+            const querySnapshot = await getDocs(q);
+            const itemsData = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    createdAt: (data.createdAt as Timestamp).toDate(),
+                } as Item;
+            });
+            setItems(itemsData);
+        } catch (error) {
+            console.error("Error fetching items: ", error);
+            toast({
+                title: "Error",
+                description: "Could not fetch items from the database.",
+                variant: "destructive"
+            });
+        }
+    };
+
+    fetchItems();
+  }, [toast]);
 
   const handleUserSignIn = (fbUser: FirebaseUser) => {
     if (!fbUser.email) return;
@@ -364,3 +392,5 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
+
+    
