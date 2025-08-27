@@ -226,7 +226,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     password?: string
   ): Promise<boolean> => {
     let email = emailOrId;
-    if (!email.includes("@")) {
+    // If input is just a student ID (7 digits), convert to RUET email
+    const idRegex = /^\d{7}$/;
+    if (idRegex.test(emailOrId)) {
+      email = `${emailOrId}@student.ruet.ac.bd`;
+    } else if (!email.includes("@")) {
       email = `${emailOrId}@student.ruet.ac.bd`;
     }
 
