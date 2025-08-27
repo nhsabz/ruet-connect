@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import type { Item, User } from "@/lib/types";
+import type { Item } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,14 +24,9 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
-import { useState } from "react";
-
 
 interface ItemCardProps {
   item: Item;
