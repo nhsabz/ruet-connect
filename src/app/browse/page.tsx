@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppContext } from "@/hooks/useAppContext";
 import type { Item, Category } from "@/lib/types";
-import { Search, PackageCheck, ArrowRightLeft, Heart, SearchIcon } from "lucide-react";
+import { Search, PackageCheck, ArrowRightLeft, Heart, Search as SearchIcon } from "lucide-react";
 
 export default function BrowsePage() {
   const { items } = useAppContext();

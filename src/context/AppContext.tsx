@@ -1,33 +1,39 @@
-
 "use client";
 
-import { createContext, useState, useEffect, type ReactNode, useCallback } from "react";
-import { 
-    collection, 
-    doc, 
-    setDoc, 
-    getDoc, 
-    addDoc, 
-    getDocs, query, 
-    where, 
-    deleteDoc,
-    Timestamp,
-    orderBy,
-    updateDoc,
-    serverTimestamp
+import {
+  createContext,
+  useState,
+  useEffect,
+  type ReactNode,
+  useCallback,
+} from "react";
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  deleteDoc,
+  Timestamp,
+  orderBy,
+  updateDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import type { User, Item, ClaimRequest, NewItem } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { storage, auth, db } from "@/lib/firebase";
-import { 
-  onAuthStateChanged, 
-  createUserWithEmailAndPassword, 
+import {
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   deleteUser,
-  type User as FirebaseUser
+  type User as FirebaseUser,
 } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_EMAILS } from "@/lib/config";
@@ -42,7 +48,12 @@ interface AppContextType {
   firebaseUser: FirebaseUser | null;
   login: (emailOrId: string, password?: string) => Promise<boolean>;
   logout: () => void;
-  signup: (name: string, email: string, password: string, contactNumber: string) => Promise<boolean>;
+  signup: (
+    name: string,
+    email: string,
+    password: string,
+    contactNumber: string
+  ) => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<void>;
   items: Item[];
   addItem: (item: NewItem) => Promise<void>;
@@ -50,7 +61,10 @@ interface AppContextType {
   deleteAccount: () => Promise<void>;
   requests: ClaimRequest[];
   createRequest: (item: Item) => Promise<boolean>;
-  updateRequestStatus: (requestId: string, status: 'Approved' | 'Rejected') => Promise<void>;
+  updateRequestStatus: (
+    requestId: string,
+    status: "Approved" | "Rejected"
+  ) => Promise<void>;
   pendingRequestCount: number;
   updateContactNumber: (newNumber: string) => Promise<void>;
   getUserById: (userId: string) => User | undefined;
@@ -71,121 +85,192 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const fetchAllData = useCallback(async () => {
     try {
-        // Fetch Items
-        const itemsCollection = collection(db, "items");
-        const itemsQuery = query(itemsCollection, orderBy("createdAt", "desc"));
-        const itemsSnapshot = await getDocs(itemsQuery);
-        const itemsData = itemsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                createdAt: (data.createdAt as Timestamp)?.toDate(),
-            } as Item;
-        });
-        setItems(itemsData);
+      // Fetch Items
+      const itemsCollection = collection(db, "items");
+      const itemsQuery = query(itemsCollection, orderBy("createdAt", "desc"));
+      const itemsSnapshot = await getDocs(itemsQuery);
+      const itemsData = itemsSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: (data.createdAt as Timestamp)?.toDate(),
+        } as Item;
+      });
+      setItems(itemsData);
 
-        // Fetch Requests
-        const requestsCollection = collection(db, "requests");
-        const requestsQuery = query(requestsCollection, orderBy("createdAt", "desc"));
-        const requestsSnapshot = await getDocs(requestsQuery);
-        const requestsData = requestsSnapshot.docs.map(doc => {
-             const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                createdAt: (data.createdAt as Timestamp)?.toDate(),
-            } as ClaimRequest;
-        });
-        setRequests(requestsData);
+      // Fetch Requests
+      const requestsCollection = collection(db, "requests");
+      const requestsQuery = query(
+        requestsCollection,
+        orderBy("createdAt", "desc")
+      );
+      const requestsSnapshot = await getDocs(requestsQuery);
+      const requestsData = requestsSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: (data.createdAt as Timestamp)?.toDate(),
+        } as ClaimRequest;
+      });
+      setRequests(requestsData);
 
-        // Fetch all Users
-        const usersCollection = collection(db, "users");
-        const usersSnapshot = await getDocs(usersCollection);
-        const usersData = usersSnapshot.docs.map(doc => doc.data() as User);
-        setAllUsers(usersData);
-
+      // Fetch all Users
+      const usersCollection = collection(db, "users");
+      const usersSnapshot = await getDocs(usersCollection);
+      const usersData = usersSnapshot.docs.map((doc) => doc.data() as User);
+      setAllUsers(usersData);
     } catch (error) {
-        console.error("Error fetching data: ", error);
+      console.error("Error fetching data: ", error);
+      // Only show error toast if user is logged in
+      if (user) {
         toast({
-            title: "Error Loading Data",
-            description: "Could not fetch data from the database. Please check your connection and Firestore rules.",
-            variant: "destructive"
+          title: "Error Loading Data",
+          description:
+            "Could not fetch data from the database. Please check your connection and Firestore rules.",
+          variant: "destructive",
         });
+      }
     }
   }, [toast]);
 
-  const handleUserSignIn = useCallback(async (fbUser: FirebaseUser) => {
-    const userDocRef = doc(db, "users", fbUser.uid);
-    const userDoc = await getDoc(userDocRef);
+  const handleUserSignIn = useCallback(
+    async (fbUser: FirebaseUser) => {
+      const userDocRef = doc(db, "users", fbUser.uid);
+      const userDoc = await getDoc(userDocRef);
 
-    if (userDoc.exists()) {
+      if (userDoc.exists()) {
         const appUser = userDoc.data() as User;
         setUser(appUser);
-        setAllUsers(prev => [...prev.filter(u => u.id !== appUser.id), appUser]);
+        setAllUsers((prev) => [
+          ...prev.filter((u) => u.id !== appUser.id),
+          appUser,
+        ]);
         setIsAdmin(ADMIN_EMAILS.includes(appUser.email));
-        toast({ title: "Login Successful", description: `Welcome back, ${appUser.name}!` });
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${appUser.name}!`,
+        });
         router.push("/");
-    } else {
+      } else {
         console.warn("User document not found for UID:", fbUser.uid);
-        const studentId = fbUser.email?.split('@')[0] || fbUser.uid;
+        const studentId = fbUser.email?.split("@")[0] || fbUser.uid;
+        // Try to get name from localStorage (set during signup)
+        let name = "RUET User";
+        try {
+          const storedName = window.localStorage.getItem(
+            "ruet-connect-signup-name"
+          );
+          if (storedName) name = storedName;
+        } catch {}
         const newUser: User = {
-            id: fbUser.uid,
-            studentId: studentId,
-            name: fbUser.displayName || 'RUET User',
-            email: fbUser.email!,
-            contactNumber: fbUser.phoneNumber || '',
-            role: ADMIN_EMAILS.includes(fbUser.email!) ? 'teacher' : 'student'
+          id: fbUser.uid,
+          studentId: studentId,
+          name,
+          email: fbUser.email!,
+          contactNumber: fbUser.phoneNumber || "",
+          role: ADMIN_EMAILS.includes(fbUser.email!) ? "teacher" : "student",
         };
         await setDoc(userDocRef, newUser);
         setUser(newUser);
-        setAllUsers(prev => [...prev, newUser]);
+        setAllUsers((prev) => [...prev, newUser]);
         setIsAdmin(ADMIN_EMAILS.includes(newUser.email));
         router.push("/");
-    }
-    await fetchAllData();
-  }, [router, toast, fetchAllData]);
-  
+      }
+      await fetchAllData();
+    },
+    [router, toast, fetchAllData]
+  );
+
   useEffect(() => {
+    // Always fetch posts on mount
+    fetchAllData();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setFirebaseUser(currentUser);
       if (currentUser) {
-        if (!user || user.id !== currentUser.uid) { 
+        // If user is not verified and not demo, redirect to verify-email page
+        if (
+          !currentUser.emailVerified &&
+          currentUser.email !== DEMO_USER_EMAIL
+        ) {
+          router.push("/verify-email");
+          setUser(null);
+          setIsAdmin(false);
+          setRequests([]);
+          setAllUsers([]);
+          // Do NOT clear items, so posts remain visible
+        } else {
+          if (!user || user.id !== currentUser.uid) {
             handleUserSignIn(currentUser);
+          }
         }
       } else {
         setUser(null);
         setIsAdmin(false);
-        setItems([]);
         setRequests([]);
         setAllUsers([]);
+        // Do NOT clear items, so posts remain visible
       }
       setIsLoaded(true);
     });
     return () => unsubscribe();
-  }, [handleUserSignIn, user]);
-  
+  }, [handleUserSignIn, user, router, fetchAllData]);
+
   const getUserById = (userId: string): User | undefined => {
-     return allUsers.find(u => u.id === userId);
+    return allUsers.find((u) => u.id === userId);
   };
 
-  const login = async (emailOrId: string, password?: string): Promise<boolean> => {
+  const login = async (
+    emailOrId: string,
+    password?: string
+  ): Promise<boolean> => {
     let email = emailOrId;
-    if (!email.includes('@')) {
-        email = `${emailOrId}@student.ruet.ac.bd`;
+    if (!email.includes("@")) {
+      email = `${emailOrId}@student.ruet.ac.bd`;
     }
-    
+
+    // Only allow login for ruet student email format, except for existing users and test accounts
+    const ruetEmailRegex = /^\d{7}@student\.ruet\.ac\.bd$/;
+    const testEmails = [
+      "m536z5mau6@cmhvzylmfc.com",
+      "hudasabbir@gmail.com",
+      "votodip893@chaublog.com",
+      "nhsabz.learn@gmail.com",
+    ];
+    // Check if user exists in allUsers (existing users)
+    const isExistingUser = allUsers.some((u) => u.email === email);
+    const isTestEmail = testEmails.includes(email);
+    if (!isExistingUser && !isTestEmail && !ruetEmailRegex.test(email)) {
+      toast({
+        title: "Login Failed",
+        description:
+          "Only RUET student emails are allowed. Format: 2103141@student.ruet.ac.bd",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     if (!password) {
-      toast({ title: "Login Failed", description: "Password is required.", variant: "destructive" });
+      toast({
+        title: "Login Failed",
+        description: "Password is required.",
+        variant: "destructive",
+      });
       return false;
     }
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-       if (!userCredential.user.emailVerified && email !== DEMO_USER_EMAIL) {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      if (!userCredential.user.emailVerified && email !== DEMO_USER_EMAIL) {
         toast({
           title: "Login Failed",
-          description: "Please verify your email before logging in. A new verification link has been sent.",
+          description:
+            "Please verify your email before logging in. A new verification link has been sent.",
           variant: "destructive",
         });
         await sendEmailVerification(userCredential.user);
@@ -194,74 +279,128 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return true;
     } catch (error: any) {
-        if ((error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') && email === DEMO_USER_EMAIL) {
-            try {
-                const cred = await createUserWithEmailAndPassword(auth, DEMO_USER_EMAIL, DEMO_PASSWORD);
-                return true;
-            } catch (signupError: any) {
-                toast({ title: "Demo Account Creation Failed", description: signupError.message, variant: "destructive" });
-                return false;
-            }
+      if (
+        (error.code === "auth/user-not-found" ||
+          error.code === "auth/invalid-credential") &&
+        email === DEMO_USER_EMAIL
+      ) {
+        try {
+          const cred = await createUserWithEmailAndPassword(
+            auth,
+            DEMO_USER_EMAIL,
+            DEMO_PASSWORD
+          );
+          return true;
+        } catch (signupError: any) {
+          toast({
+            title: "Demo Account Creation Failed",
+            description: signupError.message,
+            variant: "destructive",
+          });
+          return false;
         }
-      toast({ title: "Login Failed", description: "Invalid email or password.", variant: "destructive" });
+      }
+      toast({
+        title: "Login Failed",
+        description: "Invalid email or password.",
+        variant: "destructive",
+      });
       return false;
     }
   };
 
   const logout = () => {
     firebaseSignOut(auth).then(() => {
-        router.push("/login");
-        toast({ title: "Logged Out", description: "You have been successfully logged out." });
-    })
+      router.push("/login");
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+    });
   };
 
-  const signup = async (name: string, email: string, password: string, contactNumber: string):Promise<boolean> => {
+  const signup = async (
+    name: string,
+    email: string,
+    password: string,
+    contactNumber: string
+  ): Promise<boolean> => {
+    // Only allow signup for ruet student email format
+    const ruetEmailRegex = /^\d{7}@student\.ruet\.ac\.bd$/;
+    if (!ruetEmailRegex.test(email)) {
+      toast({
+        title: "Signup Failed",
+        description:
+          "Only RUET student emails are allowed. Format: 2103141@student.ruet.ac.bd",
+        variant: "destructive",
+      });
+      return false;
+    }
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Store name in localStorage for later retrieval after verification
+      try {
+        window.localStorage.setItem("ruet-connect-signup-name", name);
+      } catch {}
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const { user: fbUser } = userCredential;
 
       const newUser: User = {
         id: fbUser.uid,
-        studentId: email.split('@')[0],
+        studentId: email.split("@")[0],
         name,
         email,
         contactNumber,
-        role: ADMIN_EMAILS.includes(email) ? 'teacher' : 'student'
+        role: ADMIN_EMAILS.includes(email) ? "teacher" : "student",
       };
-      
       await setDoc(doc(db, "users", fbUser.uid), newUser);
       await sendEmailVerification(fbUser);
-      await firebaseSignOut(auth);
-      
+
       toast({
         title: "Signup Successful!",
-        description: "A verification link has been sent to your email. Please verify before logging in.",
+        description:
+          "A verification link has been sent to your email. Please verify your email before using the app.",
       });
-      
-      router.push("/login?verified=false");
+
+      // Optionally, redirect to a page that tells the user to verify their email
+      router.push("/verify-email");
       return true;
     } catch (error: any) {
-      if(error.code === 'auth/email-already-in-use') {
-        toast({ title: "Signup Failed", description: "An account with this email already exists. Try logging in.", variant: "destructive" });
+      if (error.code === "auth/email-already-in-use") {
+        toast({
+          title: "Signup Failed",
+          description:
+            "An account with this email already exists. Try logging in.",
+          variant: "destructive",
+        });
       } else {
         console.error("Signup error:", error);
-        toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
+        toast({
+          title: "Signup Failed",
+          description: error.message,
+          variant: "destructive",
+        });
       }
       return false;
     }
   };
-  
+
   const sendPasswordReset = async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
       toast({
         title: "Password Reset Email Sent",
-        description: "If an account exists for this email, a reset link has been sent.",
+        description:
+          "If an account exists for this email, a reset link has been sent.",
       });
     } catch (error) {
       toast({
         title: "Error Sending Reset Email",
-        description: "There was a problem sending the password reset email. Please try again.",
+        description:
+          "There was a problem sending the password reset email. Please try again.",
         variant: "destructive",
       });
     }
@@ -269,81 +408,117 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addItem = async (itemData: NewItem) => {
     if (!user?.id) {
-        throw new Error("User not authenticated");
+      throw new Error("User not authenticated");
     }
 
     try {
-        const newItemData = {
-            ...itemData,
-            userId: user.id,
-            createdAt: serverTimestamp(),
-        };
-        const docRef = await addDoc(collection(db, "items"), newItemData);
-        const newItem: Item = {
-            id: docRef.id,
-            ...itemData,
-            userId: user.id,
-            createdAt: new Date(),
-        };
-        setItems(prevItems => [newItem, ...prevItems].sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()));
+      const newItemData = {
+        ...itemData,
+        userId: user.id,
+        ownerName: user.name || "",
+        ownerContact: user.contactNumber || "",
+        createdAt: serverTimestamp(),
+      };
+      const docRef = await addDoc(collection(db, "items"), newItemData);
+      const newItem: Item = {
+        id: docRef.id,
+        ...itemData,
+        userId: user.id,
+        ownerName: user.name || "",
+        ownerContact: user.contactNumber || "",
+        createdAt: new Date(),
+      };
+      setItems((prevItems) =>
+        [newItem, ...prevItems].sort(
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        )
+      );
     } catch (error) {
-        console.error("Error adding document: ", error);
-        throw new Error("Failed to save item to database.");
+      console.error("Error adding document: ", error);
+      throw new Error("Failed to save item to database.");
     }
   };
-  
+
   const deleteItem = async (itemId: string, itemUserId: string) => {
     if (!user || (!isAdmin && user.id !== itemUserId)) {
-        toast({ title: "Permission Denied", description: "You are not authorized to delete this item.", variant: "destructive"});
-        return;
+      toast({
+        title: "Permission Denied",
+        description: "You are not authorized to delete this item.",
+        variant: "destructive",
+      });
+      return;
     }
-    
+
     try {
       await deleteDoc(doc(db, "items", itemId));
-      setItems(prevItems => prevItems.filter(item => item.id !== itemId));
-      toast({ title: "Item Deleted", description: "The item has been successfully removed."});
+      setItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+      toast({
+        title: "Item Deleted",
+        description: "The item has been successfully removed.",
+      });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to delete item.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to delete item.",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const deleteAccount = async () => {
     const currentFirebaseUser = auth.currentUser;
     if (!currentFirebaseUser) {
-        return;
+      return;
     }
 
     try {
       await deleteDoc(doc(db, "users", currentFirebaseUser.uid));
       await deleteUser(currentFirebaseUser);
-      
-      toast({ title: "Account Deleted", description: "Your account has been permanently deleted." });
+
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been permanently deleted.",
+      });
       router.push("/signup");
     } catch (error: any) {
       console.error("Error deleting account:", error);
       toast({
         title: "Account Deletion Failed",
-        description: "An error occurred. You may need to log in again to complete this action.",
+        description:
+          "An error occurred. You may need to log in again to complete this action.",
         variant: "destructive",
       });
-       if (error.code === 'auth/requires-recent-login') {
-         logout();
-       }
+      if (error.code === "auth/requires-recent-login") {
+        logout();
+      }
     }
   };
-  
+
   const createRequest = async (item: Item): Promise<boolean> => {
     if (!user) return false;
 
+    // Prevent duplicate requests for the same post by the same user
+    const alreadyRequested = requests.some(
+      (req) => req.itemId === item.id && req.requesterId === user.id
+    );
+    if (alreadyRequested) {
+      toast({
+        title: "Already Requested",
+        description: "You have already sent a request for this item.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     const newRequestData = {
-        itemId: item.id,
-        itemTitle: item.title,
-        requesterId: user.id,
-        ownerId: item.userId,
-        status: 'Pending' as const,
-        createdAt: serverTimestamp(),
+      itemId: item.id,
+      itemTitle: item.title,
+      requesterId: user.id,
+      ownerId: item.userId,
+      status: "Pending" as const,
+      createdAt: serverTimestamp(),
     };
-    
+
     try {
       const docRef = await addDoc(collection(db, "requests"), newRequestData);
       const newRequest: ClaimRequest = {
@@ -352,69 +527,109 @@ export function AppProvider({ children }: { children: ReactNode }) {
         itemTitle: item.title,
         requesterId: user.id,
         ownerId: item.userId,
-        status: 'Pending',
+        status: "Pending",
         createdAt: new Date(),
-      }
-      setRequests(prev => [newRequest, ...prev].sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()));
+      };
+      setRequests((prev) =>
+        [newRequest, ...prev].sort(
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        )
+      );
       toast({
         title: "Request Sent!",
         description: `Your request for "${item.title}" has been sent to the owner.`,
       });
       return true;
     } catch (error) {
-       console.error("Failed to create request:", error);
-       toast({ title: "Error", description: "Failed to create request. Check your Firestore rules and network.", variant: "destructive" });
-       return false;
+      console.error("Failed to create request:", error);
+      toast({
+        title: "Error",
+        description:
+          "Failed to create request. Check your Firestore rules and network.",
+        variant: "destructive",
+      });
+      return false;
     }
-  }
+  };
 
-  const updateRequestStatus = async (requestId: string, status: 'Approved' | 'Rejected') => {
+  const updateRequestStatus = async (
+    requestId: string,
+    status: "Approved" | "Rejected"
+  ) => {
     try {
-        const requestDocRef = doc(db, "requests", requestId);
-        await updateDoc(requestDocRef, { status });
-        
-        setRequests(prevRequests => 
-            prevRequests.map(req => 
-                req.id === requestId ? { ...req, status } : req
-            )
-        );
+      const requestDocRef = doc(db, "requests", requestId);
+      await updateDoc(requestDocRef, { status });
 
-        toast({
-            title: "Request Updated",
-            description: `The request has been ${status.toLowerCase()}.`
-        });
+      setRequests((prevRequests) =>
+        prevRequests.map((req) =>
+          req.id === requestId ? { ...req, status } : req
+        )
+      );
+
+      toast({
+        title: "Request Updated",
+        description: `The request has been ${status.toLowerCase()}.`,
+      });
     } catch (error) {
-        console.error("Error updating request status: ", error);
-        toast({
-            title: "Update Failed",
-            description: "Could not update the request status.",
-            variant: "destructive"
-        });
+      console.error("Error updating request status: ", error);
+      toast({
+        title: "Update Failed",
+        description: "Could not update the request status.",
+        variant: "destructive",
+      });
     }
   };
 
   const updateContactNumber = async (newNumber: string) => {
     if (user) {
-        const userDocRef = doc(db, 'users', user.id);
-        try {
-            await updateDoc(userDocRef, { contactNumber: newNumber });
-            const updatedUser = { ...user, contactNumber: newNumber };
-            setUser(updatedUser);
-            setAllUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
-            toast({ title: "Success", description: "Contact number updated." });
-        } catch(e) {
-            toast({ title: "Error", description: "Could not update contact number.", variant: "destructive"});
-        }
+      const userDocRef = doc(db, "users", user.id);
+      try {
+        await updateDoc(userDocRef, { contactNumber: newNumber });
+        const updatedUser = { ...user, contactNumber: newNumber };
+        setUser(updatedUser);
+        setAllUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? updatedUser : u))
+        );
+        toast({ title: "Success", description: "Contact number updated." });
+      } catch (e) {
+        toast({
+          title: "Error",
+          description: "Could not update contact number.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const pendingRequestCount = user
     ? requests.filter(
-        (req) => req.ownerId === user.id && req.status === 'Pending'
+        (req) => req.ownerId === user.id && req.status === "Pending"
       ).length
     : 0;
 
-  const value = { user, isAdmin, firebaseUser, login, logout, signup, sendPasswordReset, items, addItem, deleteItem, deleteAccount, requests, createRequest, updateRequestStatus, pendingRequestCount, updateContactNumber, getUserById };
+  const value = {
+    user,
+    isAdmin,
+    firebaseUser,
+    login,
+    logout,
+    signup,
+    sendPasswordReset,
+    items,
+    addItem,
+    deleteItem,
+    deleteAccount,
+    requests,
+    createRequest,
+    updateRequestStatus,
+    pendingRequestCount,
+    updateContactNumber,
+    getUserById,
+  };
 
-  return <AppContext.Provider value={value}>{!isLoaded ? null : children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={value}>
+      {!isLoaded ? null : children}
+    </AppContext.Provider>
+  );
 }

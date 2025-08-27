@@ -10,6 +10,8 @@ export interface Item {
   imageUrl: string;
   'data-ai-hint'?: string;
   userId: string; // Corresponds to User['id'], which is Firebase Auth UID
+  ownerName?: string;
+  ownerContact?: string;
   createdAt: Date;
 }
 

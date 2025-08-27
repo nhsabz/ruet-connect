@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +13,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import Link from "next/link";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -35,8 +40,8 @@ export default function LoginPage() {
   const [showVerificationAlert, setShowVerificationAlert] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get('verified') === 'true') {
-        setShowVerificationAlert(true);
+    if (searchParams.get("verified") === "true") {
+      setShowVerificationAlert(true);
     }
   }, [searchParams]);
 
@@ -56,9 +61,12 @@ export default function LoginPage() {
 
   const handlePasswordReset = async () => {
     const email = form.getValues("email");
-    if (!email.includes('@')) {
-        form.setError("email", { type: "manual", message: "Please enter a valid email address to reset password." });
-        return;
+    if (!email.includes("@")) {
+      form.setError("email", {
+        type: "manual",
+        message: "Please enter a valid email address to reset password.",
+      });
+      return;
     }
     const { success } = z.string().email().safeParse(email);
     if (!success) {
@@ -66,16 +74,18 @@ export default function LoginPage() {
       return;
     }
     await sendPasswordReset(email);
-  }
+  };
 
   return (
     <div className="flex items-center justify-center py-12">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">Login to RUET Connect</CardTitle>
+          <CardTitle className="text-2xl font-headline">
+            Login to RUET Connect
+          </CardTitle>
           <CardDescription>
-              Enter your credentials to access your account.
-              For demo, use ID: <strong>2103141</strong> and Password: <strong>12345678</strong>
+            Enter your RUET student email to access your account. Format:{" "}
+            <strong>2103141@student.ruet.ac.bd</strong>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -97,7 +107,10 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Student ID / Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., 2103141 or user@example.com" {...field} />
+                      <Input
+                        placeholder="e.g., 2103141 or user@example.com"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -110,7 +123,7 @@ export default function LoginPage() {
                   <FormItem>
                     <div className="flex justify-between items-center">
                       <FormLabel>Password</FormLabel>
-                       <Button
+                      <Button
                         type="button"
                         variant="link"
                         className="p-0 h-auto text-xs"
@@ -127,7 +140,7 @@ export default function LoginPage() {
                 )}
               />
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Logging in...' : 'Login'}
+                {isSubmitting ? "Logging in..." : "Login"}
               </Button>
             </form>
           </Form>
