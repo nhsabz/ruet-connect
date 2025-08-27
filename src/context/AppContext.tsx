@@ -24,7 +24,7 @@ import {
 } from "firebase/firestore";
 import type { User, Item, ClaimRequest, NewItem } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { storage, auth, db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
