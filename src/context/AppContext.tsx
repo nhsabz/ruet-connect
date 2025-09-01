@@ -38,10 +38,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_EMAILS } from "@/lib/config";
 
-// --- Demo Account ---
-const DEMO_USER_EMAIL = "2103141@student.ruet.ac.bd";
-const DEMO_PASSWORD = "12345678";
-
 interface AppContextType {
   user: User | null;
   isAdmin: boolean;
@@ -189,11 +185,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setFirebaseUser(currentUser);
       if (currentUser) {
-        // If user is not verified and not demo, redirect to verify-email page
-        if (
-          !currentUser.emailVerified &&
-          currentUser.email !== DEMO_USER_EMAIL
-        ) {
+        // If user is not verified, redirect to verify-email page
+        if (!currentUser.emailVerified) {
           router.push("/verify-email");
           setUser(null);
           setIsAdmin(false);
@@ -270,7 +263,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         email,
         password
       );
-      if (!userCredential.user.emailVerified && email !== DEMO_USER_EMAIL) {
+      if (!userCredential.user.emailVerified) {
         toast({
           title: "Login Failed",
           description:
@@ -283,27 +276,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return true;
     } catch (error: any) {
-      if (
-        (error.code === "auth/user-not-found" ||
-          error.code === "auth/invalid-credential") &&
-        email === DEMO_USER_EMAIL
-      ) {
-        try {
-          const cred = await createUserWithEmailAndPassword(
-            auth,
-            DEMO_USER_EMAIL,
-            DEMO_PASSWORD
-          );
-          return true;
-        } catch (signupError: any) {
-          toast({
-            title: "Demo Account Creation Failed",
-            description: signupError.message,
-            variant: "destructive",
-          });
-          return false;
-        }
-      }
+      // Removed demo account auto-creation logic
       toast({
         title: "Login Failed",
         description: "Invalid email or password.",
