@@ -1,36 +1,39 @@
 # RUET Connect
 
-This is a Next.js web application built in Firebase Studio that serves as a community platform for students of RUET (Rajshahi University of Engineering & Technology).
+Live Site: [https://ruet-connect.vercel.app/](https://ruet-connect.vercel.app/)
 
-## Description
+RUET Connect is a modern Next.js web application designed as a community platform for students of RUET (Rajshahi University of Engineering & Technology).
 
-RUET Connect is a community-based platform designed specifically for the students of RUET. Its main goal is to create a central hub where students can help each other by sharing resources and information in an organized and efficient way.
+## Overview
 
-### Key Features
+RUET Connect provides a central hub for students to share resources, report lost and found items, lend or donate goods, and connect with each other in a secure and organized way.
 
-- **User Authentication**: The site has a complete user system. Students can create a secure account using their email, log in, and also reset their password if they forget it. There is also a pre-configured demo account for easy testing.
-- **Item Posting**: Logged-in users can post items across four distinct categories:
-  - **Lost**: To report personal items that have been lost on campus.
-  - **Found**: To post details about items that have been found, helping to return them to their rightful owner.
-  - **Lend**: To offer items for temporary borrowing, such as tools, books, or a cycle pump.
-  - **Donate**: To give away items like old textbooks or other useful things to fellow students for free.
-- **Image Uploads**: When posting an item, users can upload an image to provide a clear visual, which is especially useful for lost and found items. These images are securely stored using Firebase Storage.
-- **Browse and Discover**: A comprehensive "Browse" page displays all the items posted on the platform. Users can easily switch between the four categories using tabs and use a search bar to quickly find specific items by title.
-- **User Profiles**: Each user has a personal profile page that shows their name, student ID, and contact details. This page also conveniently lists all the items they have personally posted and any requests they have received from other students.
-- **Request System**: To manage interactions, there is a simple "Claim / Request" system. When a student is interested in an item (like a donated textbook or a found wallet), they can send a request to the owner. The owner is then notified and can view and manage these requests from their profile page.
+## Features
 
-### Technologies Used
+- **User Authentication**: Secure sign-up, login, and password reset for RUET students using their university email.
+- **Item Posting**: Post items in four categories:
+  - **Lost**: Report lost items on campus.
+  - **Found**: Help return found items to their owners.
+  - **Lend**: Offer items for temporary borrowing (e.g., tools, books).
+  - **Donate**: Give away items (e.g., textbooks) to fellow students for free.
+- **Image Uploads**: Upload images for item posts. Images are securely stored using **Cloudinary** (not Firebase Storage).
+- **Browse and Search**: Easily browse all posted items, filter by category, and search by title.
+- **User Profiles**: View your profile with name, student ID, contact info, and a list of your posted items and received requests.
+- **Request System**: Send and manage requests to claim, borrow, or receive items. Owners are notified and can manage requests from their profile.
 
-- **Framework**: **Next.js** (utilizing the App Router for modern, server-centric routing).
-- **Language**: **TypeScript** for type safety and improved developer experience.
-- **UI Library**: **React** for building the user interface components.
-- **Styling**: **Tailwind CSS** for a utility-first styling approach.
-- **UI Components**: **ShadCN UI** for a pre-built, accessible, and customizable component library.
-- **Backend Services**: **Firebase** is used for:
-  - **Authentication**: Handling user sign-up, login, and session management.
-  - **Storage**: Storing user-uploaded images for item posts.
-- **State Management**: **React Context API** is used for managing global application state (like the current user, items, and requests).
-- **Form Management**: **React Hook Form** for building and managing forms, paired with **Zod** for robust schema validation.
-- **AI Integration**: The project is set up with **Genkit** for potential future integration of generative AI features.
+## Technologies Used
 
-arreh pera nai
+- **Next.js** (App Router)
+- **TypeScript**
+- **React**
+- **Tailwind CSS**
+- **ShadCN UI** (component library)
+- **Firebase** (Authentication, Firestore database)
+- **Cloudinary** (Image storage)
+- **React Context API** (state management)
+- **React Hook Form** & **Zod** (form and validation)
+- **Genkit** (AI integration setup)
+
+## Storage
+
+All images uploaded by users are stored securely using **Cloudinary**. This ensures fast, reliable, and scalable image hosting for all item posts.
