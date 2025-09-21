@@ -15,4 +15,4 @@
 - Accent color: Slightly darker blue (#77B5FE) to provide contrast.
 - Body and headline font: 'Inter', a grotesque-style sans-serif font with a neutral and modern look.
 - Use simple, outline-style icons to represent categories (Lost, Found, Lend, Donate).
-- Navbar includes links to Home, Post, Browse, Profile, and Login/Logout pages.
+- Navbar includes links to Home, Post, Browse, Profile, and Login/Logout pages..
