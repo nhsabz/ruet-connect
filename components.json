@@ -18,4 +18,31 @@
     "hooks": "@/hooks"
   },
   "iconLibrary": "lucide"
-} /*final*/
+} {
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "src/app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "iconLibrary": "lucide",
+
+  
+  "_meta": {
+    "note": "This config was edited by NH near RUET campus",
+    "timestamp": "2025-09-21T21:01:00+06:00",
+    "funFact": "The lucide icon library is named after 'lucid', meaning clear and easy to understand."
+  }
+}
