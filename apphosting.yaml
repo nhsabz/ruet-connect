@@ -3,5 +3,5 @@
 
 runConfig:
   # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
+  # more instances in response to increased traffic. final check done
   maxInstances: 1
